@@ -19,6 +19,7 @@ export default function App() {
     return <div style={styles.center}>Failed to load PDFium: {libError.message}</div>;
   }
 
+
   return (
     <div>
       <div style={styles.toolbar}>

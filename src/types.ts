@@ -29,3 +29,8 @@ export interface SearchMatch {
   charIndex: number;
   charCount: number;
 }
+
+export interface SearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+}
