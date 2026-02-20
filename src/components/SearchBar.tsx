@@ -5,6 +5,9 @@ interface SearchBarProps {
   query: string;
   onChange: (q: string) => void;
   matchCount: number;
+  currentMatchIndex: number;
+  onNext: () => void;
+  onPrev: () => void;
   caseSensitive: boolean;
   wholeWord: boolean;
   onToggleCaseSensitive: () => void;
@@ -16,11 +19,16 @@ export function SearchBar({
   query,
   onChange,
   matchCount,
+  currentMatchIndex,
+  onNext,
+  onPrev,
   caseSensitive,
   wholeWord,
   onToggleCaseSensitive,
   onToggleWholeWord,
 }: SearchBarProps) {
+  const hasMatches = matchCount > 0;
+
   return (
     <div style={styles.container}>
       <input
@@ -46,9 +54,31 @@ export function SearchBar({
         W
       </button>
       {query && (
-        <span style={styles.count}>
-          {matchCount} match{matchCount !== 1 ? 'es' : ''}
-        </span>
+        <>
+          <span style={styles.count}>
+            {matchCount === 0
+              ? 'No matches'
+              : `${currentMatchIndex + 1} of ${matchCount}`}
+          </span>
+          <div style={styles.navGroup}>
+            <button
+              onClick={onPrev}
+              disabled={!hasMatches}
+              title="Previous match (⌘⇧G)"
+              style={navStyle(!hasMatches)}
+            >
+              ↑
+            </button>
+            <button
+              onClick={onNext}
+              disabled={!hasMatches}
+              title="Next match (⌘G)"
+              style={navStyle(!hasMatches)}
+            >
+              ↓
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -69,6 +99,23 @@ function toggleStyle(active: boolean): CSSProperties {
     cursor: 'pointer',
     background: active ? '#0066cc' : 'transparent',
     color: active ? '#fff' : '#555',
+  };
+}
+
+function navStyle(disabled: boolean): CSSProperties {
+  return {
+    width: 28,
+    height: 28,
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    borderRadius: 4,
+    border: '1px solid transparent',
+    cursor: disabled ? 'default' : 'pointer',
+    background: 'transparent',
+    color: disabled ? '#bbb' : '#555',
   };
 }
 
@@ -99,6 +146,11 @@ const styles: Record<string, CSSProperties> = {
     fontSize: 13,
     color: '#666',
     whiteSpace: 'nowrap',
-    marginLeft: 8,
+    marginLeft: 4,
+    minWidth: 80,
+  },
+  navGroup: {
+    display: 'flex',
+    gap: 2,
   },
 };
