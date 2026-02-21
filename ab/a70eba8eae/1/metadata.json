@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "aba70eba8eae",
+  "session_id": "fceca03d-028b-4f42-a356-210fdc6ba56b",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T13:37:16.816041Z",
+  "branch": "main",
+  "checkpoints_count": 3,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "src/lib/components/PdfPage.svelte",
+    "src/lib/components/PdfViewer.svelte",
+    "src/lib/types.ts",
+    "src/routes/+page.svelte"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 27,
+    "cache_creation_tokens": 27813,
+    "cache_read_tokens": 731424,
+    "output_tokens": 2619,
+    "api_call_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T13:37:16.753625Z",
+    "agent_lines": 53,
+    "human_added": 64,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 117,
+    "agent_percentage": 45.2991452991453
+  },
+  "transcript_path": ".claude/projects/-Users-daishokomiyama-Code-pdfwasm/fceca03d-028b-4f42-a356-210fdc6ba56b.jsonl"
+}

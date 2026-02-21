@@ -1,0 +1,116 @@
+Implement the following plan:
+
+# Virtualized PDF Rendering (Load on Demand)
+
+## Context
+Loading a large PDF takes ~11 seconds because every page is rendered and char-extracted sequentially before anything is shown. We want near-instant initial display regardless of PDF size by only rendering pages visible in the viewport.
+
+## Design
+
+### Data Model Split
+Currently `PageData` bundles metadata + bitmap together. Split into two concerns:
+
+```
+PageMeta (all pages, instant):    { index, originalWidth, originalHeight, chars, scale }
+PageBitmap (on-demand, per page): { imageData, width, height }
+```
+
+- On file load: create `PageMeta[]` for all pages instantly using `page.getSize()` (no render)
+- Extract char boxes progressively in background (needed for search)
+- Render bitmaps only when a page enters the viewport via `IntersectionObserver`
+
+### API Available (confirmed from @hyzyla/pdfium source)
+- `doc.getPageCount()` — page count without iterating
+- `doc.getPage(index)` — get individual page by zero-based index
+- `page.getSize(true)` — returns `{ width, height }` in PDF points, no render needed
+
+### Loading Pipeline (New)
+```
+1. Parse document                        → instant
+2. For each page: getSize()              → instant (all pages)
+   → UI shows correctly-sized placeholders immediately
+3. IntersectionObserver fires for visible pages
+   → extractCharBoxes(page) + page.render() for that page
+   → Canvas displays bitmap, highlights become available
+4. Background: extract chars for OFF-SCREEN pages (for search)
+   → yield between pages with setTimeout(0) to keep UI responsive
+```
+
+## Steps
+
+### 1. Update types (`src/lib/types.ts`)
+- Keep `CharBox`, `SearchMatch`, `SearchOptions` unchanged
+- Replace `PageData` with:
+  ```ts
+  interface PageMeta {
+    index: number;
+    originalWidth: number;
+    originalHeight: number;
+    scale: number;
+    chars: CharBox[];       // populated progressively
+    imageData?: ImageData;  // populated on-demand when visible
+    width: number;          // rendered pixel width (originalWidth * scale)
+    height: number;         // rendered pixel height (originalHeight * scale)
+  }
+  ```
+  Keep the name `PageData` to minimize churn — just make `imageData` optional.
+
+### 2. Rewrite `loadFile` in `+page.svelte`
+- Parse document, store `doc` reference (don't destroy immediately)
+- Build `PageData[]` using `doc.getPage(i).getSize(true)` — no render, no char extraction
+- Set `pages` immediately → UI renders placeholders
+- Kick off background char extraction (see step 5)
+
+### 3. Add render-on-demand to `PdfPage.svelte`
+- Accept `doc` (PDFiumDocument) as a prop
+- Use Svelte `use:` action with `IntersectionObserver` (rootMargin ~`"200px"` to pre-render nearby pages)
+- When page enters viewport and `imageData` is undefined:
+  - Call `doc.getPage(index)` → `extractCharBoxes(page)` → `page.render()` → create `ImageData`
+  - Update the page's `imageData` (mutate + trigger reactivity)
+- When `imageData` exists: paint to canvas as before
+- Show a loading spinner or gray placeholder while rendering
+
+### 4. Update `PdfViewer.svelte`
+- Pass `doc` down to each `PdfPage`
+- Search logic unchanged — `findMatches` already works on `page.chars`, which gets populated progressively
+
+### 5. Background char extraction in `+page.svelte`
+- After initial page setup, run async loop extracting chars for all pages
+- Between pages, `await new Promise(r => setTimeout(r, 0))` to yield to main thread
+- Update `pages[i].chars = extractedChars` progressively
+- Search becomes available as chars populate
+
+### 6. Cleanup
+- `currentDoc` lifecycle: store in component, destroy on new file load or unmount
+- No changes needed to `charBoxes.ts`, `search.ts`, `pdfium.ts`, or `SearchBar.svelte`
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/types.ts` | Make `imageData` optional in `PageData` |
+| `src/routes/+page.svelte` | Rewrite `loadFile`: instant setup + background char extraction; pass `doc` to viewer |
+| `src/lib/components/PdfViewer.svelte` | Pass `doc` prop through to `PdfPage` |
+| `src/lib/components/PdfPage.svelte` | Add `IntersectionObserver` for on-demand render; handle optional `imageData` |
+
+## Verification
+1. `pnpm run check` — no TS errors
+2. `pnpm run dev` → open a large PDF
+3. Placeholders appear instantly (correct sizes)
+4. Visible pages render within ~1s
+5. Scrolling to new pages triggers their rendering
+6. Search works after chars are extracted (progressive)
+7. `pnpm run build` — production build succeeds
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+something wrong, i see each page conainer (greyed out), but i see no contents even after 20 sec wait.
+
+---
+
+i still see warnings:
+`renderCanvas` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_updatesveltenon_reactive_update
