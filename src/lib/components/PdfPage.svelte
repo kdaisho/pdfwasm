@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PageData, SearchMatch } from "../types";
+	import type { PageData, SearchMatch } from "$lib/types";
 
 	interface Props {
 		page: PageData;

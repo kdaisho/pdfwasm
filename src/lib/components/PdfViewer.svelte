@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { PageData, SearchMatch } from "../types";
-	import { findMatches } from "../services/search";
+	import type { PageData, SearchMatch } from "$lib/types";
+	import { findMatches } from "$lib/services/search";
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
 

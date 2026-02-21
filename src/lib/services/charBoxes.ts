@@ -1,5 +1,5 @@
 import type { PDFiumPage } from "@hyzyla/pdfium";
-import type { CharBox } from "../types";
+import type { CharBox } from "$lib/types";
 
 export const RENDER_SCALE = 2;
 

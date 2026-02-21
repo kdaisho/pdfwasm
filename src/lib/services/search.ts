@@ -1,4 +1,4 @@
-import type { PageData, SearchMatch, SearchOptions } from "../types";
+import type { PageData, SearchMatch, SearchOptions } from "$lib/types";
 
 function isWordChar(ch: string): boolean {
 	return /\w/.test(ch);

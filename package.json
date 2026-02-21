@@ -4,16 +4,17 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "vite",
+		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"check": "svelte-check --tsconfig ./tsconfig.app.json"
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
 	},
 	"dependencies": {
 		"@hyzyla/pdfium": "^2.1.9"
 	},
 	"devDependencies": {
-		"@sveltejs/vite-plugin-svelte": "^5",
+		"@sveltejs/adapter-static": "^3.0.10",
+		"@sveltejs/kit": "^2.53.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.0",
 		"svelte": "^5",

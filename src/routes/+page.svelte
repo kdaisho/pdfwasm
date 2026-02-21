@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
-	import { getPdfiumLibrary } from "./services/pdfium";
-	import { extractCharBoxes, RENDER_SCALE } from "./services/charBoxes";
-	import type { PageData } from "./types";
-	import PdfViewer from "./components/PdfViewer.svelte";
+	import { getPdfiumLibrary } from "$lib/services/pdfium";
+	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
+	import type { PageData } from "$lib/types";
+	import PdfViewer from "$lib/components/PdfViewer.svelte";
 
 	let library: PDFiumLibrary | null = $state(null);
 	let libLoading = $state(true);

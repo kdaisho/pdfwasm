@@ -1,13 +1,12 @@
-/// <reference types="svelte" />
-/// <reference types="vite/client" />
-
-declare module "*.svelte" {
-	import type { Component } from "svelte";
-	const component: Component;
-	export default component;
+// See https://svelte.dev/docs/kit/types#app.d.ts
+declare global {
+	namespace App {
+		// interface Error {}
+		// interface Locals {}
+		// interface PageData {}
+		// interface PageState {}
+		// interface Platform {}
+	}
 }
 
-declare module "@hyzyla/pdfium/pdfium.wasm?url" {
-	const url: string;
-	export default url;
-}
+export {};
