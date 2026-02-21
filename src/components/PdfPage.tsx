@@ -4,6 +4,8 @@ import type { PageData, SearchMatch } from '../types';
 interface PdfPageProps {
   page: PageData;
   matches: SearchMatch[];
+  /** charIndex of the currently active match on this page, or -1 */
+  activeCharIndex: number;
 }
 
 /**
@@ -34,7 +36,7 @@ function pdfToCanvas(
   };
 }
 
-export function PdfPage({ page, matches }: PdfPageProps) {
+export function PdfPage({ page, matches, activeCharIndex }: PdfPageProps) {
   const renderCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -61,9 +63,8 @@ export function PdfPage({ page, matches }: PdfPageProps) {
 
     if (matches.length === 0) return;
 
-    ctx.fillStyle = 'rgba(255, 220, 0, 0.45)';
-
-    for (const match of matches) {
+    function drawMatch(match: SearchMatch, color: string) {
+      ctx!.fillStyle = color;
       for (let i = match.charIndex; i < match.charIndex + match.charCount; i++) {
         const c = page.chars[i];
         if (!c) continue;
@@ -75,13 +76,21 @@ export function PdfPage({ page, matches }: PdfPageProps) {
           page.originalHeight,
           page.scale,
         );
-        // Skip chars with no bounding box data (w===0 or h===0)
-        if (w > 0 && h > 0) {
-          ctx.fillRect(x, y, w, h);
-        }
+        if (w > 0 && h > 0) ctx!.fillRect(x, y, w, h);
       }
     }
-  }, [page, matches]);
+
+    // Draw non-active matches in yellow, active match in orange on top
+    for (const match of matches) {
+      if (match.charIndex !== activeCharIndex) {
+        drawMatch(match, 'rgba(255, 220, 0, 0.45)');
+      }
+    }
+    if (activeCharIndex >= 0) {
+      const active = matches.find((m) => m.charIndex === activeCharIndex);
+      if (active) drawMatch(active, 'rgba(255, 140, 0, 0.75)');
+    }
+  }, [page, matches, activeCharIndex]);
 
   return (
     <div
