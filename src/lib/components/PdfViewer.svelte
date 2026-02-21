@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
@@ -37,14 +38,12 @@
 		findMatches(pages, debouncedQuery, { caseSensitive, wholeWord }),
 	);
 
-	// Reset to first match when results change
+	// Reset to first match only when search parameters change (not when background extraction adds chars)
 	$effect(() => {
-		// Access reactive deps
-		matches.length;
 		debouncedQuery;
 		caseSensitive;
 		wholeWord;
-		currentMatchIndex = matches.length > 0 ? 0 : -1;
+		currentMatchIndex = untrack(() => matches.length) > 0 ? 0 : -1;
 	});
 
 	// Scroll active match into view
