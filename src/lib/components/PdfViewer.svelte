@@ -23,6 +23,7 @@
 	let currentMatchIndex = $state(-1);
 	let splitPoints: Set<number> = $state(new Set());
 	let exporting = $state(false);
+	let thumbnailWidth = $state(180);
 
 	let searchInput: HTMLInputElement | undefined = $state();
 	let pageElements = new Map<number, HTMLDivElement>();
@@ -178,19 +179,31 @@
 		}}
 	/>
 
-	{#if splitMode && splitPoints.size > 0}
+	{#if splitMode}
 		<div class="split-toolbar">
-			<span class="split-info">
-				{splitPoints.size} split point{splitPoints.size > 1 ? "s" : ""} selected
-				&rarr; {splitPoints.size + 1} files
-			</span>
-			<button class="export-button" onclick={handleExport} disabled={exporting}>
-				{exporting ? "Exporting…" : "Export Split PDFs"}
-			</button>
+			<label class="scale-control">
+				Size
+				<input
+					type="range"
+					min="100"
+					max="400"
+					step="10"
+					bind:value={thumbnailWidth}
+				/>
+			</label>
+			{#if splitPoints.size > 0}
+				<span class="split-info">
+					{splitPoints.size} split point{splitPoints.size > 1 ? "s" : ""} selected
+					&rarr; {splitPoints.size + 1} files
+				</span>
+				<button class="export-button" onclick={handleExport} disabled={exporting}>
+					{exporting ? "Exporting…" : "Export Split PDFs"}
+				</button>
+			{/if}
 		</div>
 	{/if}
 
-	<div class="pages-container" class:split-grid={splitMode}>
+	<div class="pages-container" class:split-grid={splitMode} style="--thumb-width: {thumbnailWidth}px">
 		{#each pages as page, i (page.index)}
 			{@const pageMatches = matches.filter(
 				(m) => m.pageIndex === page.index,
@@ -251,7 +264,7 @@
 		align-items: center;
 	}
 	.split-grid .page-cell {
-		width: 180px;
+		width: var(--thumb-width, 180px);
 	}
 	.page-number {
 		font-size: 12px;
@@ -337,6 +350,17 @@
 		padding: 8px 16px;
 		background: #fff3cd;
 		border-bottom: 1px solid #ffc107;
+	}
+	.scale-control {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 13px;
+		color: #856404;
+	}
+	.scale-control input[type="range"] {
+		width: 100px;
+		cursor: pointer;
 	}
 	.split-info {
 		font-size: 13px;
