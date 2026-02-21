@@ -211,21 +211,18 @@
 				>
 					<PdfPage {page} matches={pageMatches} {activeCharIndex} {doc} />
 				</div>
-				{#if splitMode && i < pages.length - 1}
-					<button
-						class="split-divider"
-						class:split-active={splitPoints.has(page.index)}
-						onclick={() => toggleSplitPoint(page.index)}
-						title="Split after page {page.index + 1}"
-					>
-						{#if splitPoints.has(page.index)}
-							<span class="split-label">&#9986; Split here</span>
-						{:else}
-							<span class="split-label-subtle">Click to split</span>
-						{/if}
-					</button>
-				{/if}
 			</div>
+			{#if splitMode && i < pages.length - 1}
+				<button
+					class="split-divider"
+					class:split-active={splitPoints.has(page.index)}
+					onclick={() => toggleSplitPoint(page.index)}
+					title="Split after page {page.index + 1}"
+				>
+					<span class="split-divider-line"></span>
+					<span class="split-label" class:split-label-active={splitPoints.has(page.index)}>&#9986;</span>
+				</button>
+			{/if}
 		{/each}
 	</div>
 </div>
@@ -239,18 +236,22 @@
 		padding: 16px;
 		overflow-x: auto;
 	}
-	.split-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	.pages-container.split-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: stretch;
 		max-width: 1400px;
 		margin: 0 auto;
-		gap: 12px;
-		align-items: start;
+		gap: 8px 0;
 	}
 	.page-cell {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+	}
+	.split-grid .page-cell {
+		width: 180px;
 	}
 	.page-number {
 		font-size: 12px;
@@ -279,33 +280,54 @@
 		height: 100% !important;
 	}
 	.split-divider {
-		width: 100%;
-		margin-top: 6px;
-		padding: 4px 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		width: 36px;
 		border: none;
-		border-top: 2px dashed #ccc;
 		background: transparent;
 		cursor: pointer;
-		transition:
-			border-color 0.15s,
-			background 0.15s;
+		padding: 0;
+		position: relative;
 	}
-	.split-divider:hover {
-		border-top-color: #4f6ef7;
-		background: rgba(79, 110, 247, 0.05);
+	.split-divider-line {
+		width: 4px;
+		height: 100%;
+		min-height: 40px;
+		background: #ccc;
+		border-radius: 2px;
+		transition: background 0.15s, width 0.15s;
 	}
-	.split-divider.split-active {
-		border-top: 3px solid #e74c3c;
-		background: rgba(231, 76, 60, 0.08);
+	.split-divider:hover .split-divider-line {
+		background: #4f6ef7;
+		width: 5px;
+	}
+	.split-divider.split-active .split-divider-line {
+		background: #e74c3c;
+		width: 5px;
 	}
 	.split-label {
-		font-size: 11px;
-		color: #e74c3c;
-		font-weight: 600;
-	}
-	.split-label-subtle {
-		font-size: 11px;
+		position: absolute;
+		font-size: 16px;
 		color: #aaa;
+		background: white;
+		border-radius: 50%;
+		width: 26px;
+		height: 26px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+		transition: color 0.15s, box-shadow 0.15s;
+	}
+	.split-divider:hover .split-label {
+		color: #4f6ef7;
+		box-shadow: 0 1px 4px rgba(79, 110, 247, 0.3);
+	}
+	.split-label-active {
+		color: #e74c3c !important;
+		box-shadow: 0 1px 6px rgba(231, 76, 60, 0.35) !important;
 	}
 	.split-toolbar {
 		display: flex;
