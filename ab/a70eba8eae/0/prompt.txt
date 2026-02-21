@@ -1,0 +1,107 @@
+Implement the following plan:
+
+# Migrate from Svelte + Vite to SvelteKit
+
+## Context
+The project is currently a plain Svelte 5 + Vite 6 SPA. Migrating to SvelteKit gives us file-based routing, SSR/SSG options, better project conventions, and the standard Svelte toolchain going forward.
+
+## Steps
+
+### 1. Install SvelteKit dependencies
+- Add `@sveltejs/kit` and `@sveltejs/adapter-static` (SPA mode, no server needed)
+- Remove `@sveltejs/vite-plugin-svelte` (SvelteKit manages this internally)
+- Remove manual `vite` dep if SvelteKit provides it
+
+### 2. Rewrite `svelte.config.js`
+- Use `@sveltejs/adapter-static` with `fallback: 'index.html'` for SPA behavior
+- Add `vitePreprocess()`
+- Keep `compilerOptions` defaults
+
+### 3. Rewrite `vite.config.ts`
+- Use `sveltekit()` plugin instead of `svelte()`
+- Keep `vite-plugin-wasm`, `optimizeDeps.exclude`, and `build.target: "esnext"`
+
+### 4. Restructure `src/` to SvelteKit layout
+**Move files:**
+- `src/index.css` → `src/app.css`
+- `src/App.svelte` → `src/routes/+page.svelte` (logic stays the same)
+- `src/components/` → `src/lib/components/` (use `$lib` alias)
+- `src/services/` → `src/lib/services/`
+- `src/types.ts` → `src/lib/types.ts`
+
+**Create new files:**
+- `src/routes/+layout.svelte` — imports `app.css`, renders `{@render children()}`
+- `src/app.html` — SvelteKit HTML template (replaces `index.html`)
+- `src/app.d.ts` — SvelteKit app types + Wasm URL declaration
+
+**Delete:**
+- `src/main.ts` (SvelteKit handles mounting)
+- `index.html` (replaced by `src/app.html`)
+- `tsconfig.app.json` and `tsconfig.node.json` (SvelteKit generates `.svelte-kit/tsconfig.json`)
+
+### 5. Update `tsconfig.json`
+- Extend from `.svelte-kit/tsconfig.json`
+- Keep strict mode settings
+
+### 6. Update `package.json` scripts
+```
+"dev": "vite dev",
+"build": "vite build",
+"preview": "vite preview",
+"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+```
+
+### 7. Fix imports in moved files
+- Update all `./services/`, `./components/`, `./types` imports to use `$lib/services/`, `$lib/components/`, `$lib/types`
+
+### 8. Add SPA prerender config
+- Create `src/routes/+layout.ts` with:
+  ```ts
+  export const prerender = true;
+  export const ssr = false;
+  ```
+
+## Files Modified/Created
+| Action | File |
+|--------|------|
+| Rewrite | `svelte.config.js` |
+| Rewrite | `vite.config.ts` |
+| Rewrite | `tsconfig.json` |
+| Rewrite | `package.json` |
+| Create | `src/app.html` |
+| Create | `src/app.css` (moved from `src/index.css`) |
+| Create | `src/app.d.ts` (SvelteKit types) |
+| Create | `src/routes/+layout.svelte` |
+| Create | `src/routes/+layout.ts` |
+| Create | `src/routes/+page.svelte` (from `src/App.svelte`) |
+| Move | `src/components/` → `src/lib/components/` |
+| Move | `src/services/` → `src/lib/services/` |
+| Move | `src/types.ts` → `src/lib/types.ts` |
+| Delete | `src/main.ts`, `index.html`, `tsconfig.app.json`, `tsconfig.node.json` |
+
+## Verification
+1. `npm install` — no errors
+2. `npm run dev` — dev server starts, opens in browser
+3. Open a PDF, verify rendering works
+4. Search text, verify highlights appear correctly
+5. `npm run check` — no TypeScript errors
+6. `npm run build` — production build succeeds
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+use pnpm
+
+---
+
+when PDF is large, it takes 11 sec to load PDF. can't we improve the performance? analyze, suggest a few solutions
+
+---
+
+[Request interrupted by user for tool use]

@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "aba70eba8eae",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "package.json",
+    "src/app.d.ts",
+    "src/app.html",
+    "src/lib/components/PdfPage.svelte",
+    "src/lib/components/PdfViewer.svelte",
+    "src/lib/services/charBoxes.ts",
+    "src/lib/services/search.ts",
+    "src/routes/+layout.svelte",
+    "src/routes/+layout.ts",
+    "src/routes/+page.svelte",
+    "svelte.config.js",
+    "tsconfig.json",
+    "vite.config.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ab/a70eba8eae/0/metadata.json",
+      "transcript": "/ab/a70eba8eae/0/full.jsonl",
+      "context": "/ab/a70eba8eae/0/context.md",
+      "content_hash": "/ab/a70eba8eae/0/content_hash.txt",
+      "prompt": "/ab/a70eba8eae/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 11,
+    "cache_creation_tokens": 11099,
+    "cache_read_tokens": 466097,
+    "output_tokens": 1578,
+    "api_call_count": 7
+  }
+}
