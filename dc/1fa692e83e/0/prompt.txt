@@ -1,0 +1,89 @@
+Implement the following plan:
+
+# Fix: Search navigation broken during background char extraction
+
+## Context
+After implementing virtualized rendering, search navigation (next/prev match) is broken. The user sees 54 hits but can't navigate past the first one. Two issues cause this:
+
+### Root Cause 1: Match index resets on every background extraction tick
+In `PdfViewer.svelte` (line 39-47), this `$effect` resets `currentMatchIndex` to 0 whenever `matches.length` changes:
+```js
+$effect(() => {
+    matches.length;  // reactive dep
+    debouncedQuery;
+    caseSensitive;
+    wholeWord;
+    currentMatchIndex = matches.length > 0 ? 0 : -1;
+});
+```
+Since `matches` is derived from `pages` (which is `$state`), every time the background loop updates `pages[i].chars`, `matches` recomputes, `matches.length` changes, and the effect fires — bouncing `currentMatchIndex` back to 0. The user clicks "next" → index becomes 1 → background extraction ticks → index resets to 0.
+
+**Fix**: Only reset `currentMatchIndex` when the *search parameters* change (`debouncedQuery`, `caseSensitive`, `wholeWord`), not when `matches.length` changes from background extraction. Remove `matches.length` from the effect's dependencies.
+
+### Root Cause 2: No highlight visible on unrendered pages
+When navigating to a match on a page that hasn't been rendered yet, the scroll works (placeholders have correct sizes), but the user sees a grey box with no highlight. The IntersectionObserver fires after scroll and the page renders, but the highlight may not appear until the overlay canvas is mounted.
+
+**Fix**: This actually already works correctly — when `localImageData` is set, the `{#if}` block mounts the canvas, `bind:this` updates `overlayCanvas`, and the highlight `$effect` re-runs. No change needed here; the page just needs ~100ms to render after scrolling. This is acceptable UX.
+
+## Steps
+
+### 1. Fix match index reset in `PdfViewer.svelte`
+Change the reset `$effect` to only depend on search parameter changes, not `matches.length`:
+
+```js
+$effect(() => {
+    debouncedQuery;
+    caseSensitive;
+    wholeWord;
+    currentMatchIndex = matches.length > 0 ? 0 : -1;
+});
+```
+
+Simply remove the `matches.length;` line. The effect still re-runs when `debouncedQuery`, `caseSensitive`, or `wholeWord` change (which is when the user intentionally changes the search). When background extraction adds chars and matches grows, the effect won't fire.
+
+Note: `matches.length` is still read inside the body (`matches.length > 0`), but that's fine — Svelte 5 tracks all reactive reads inside `$effect`, so we need to restructure slightly. We should capture the match count separately:
+
+```js
+$effect(() => {
+    // Only react to search parameter changes
+    debouncedQuery;
+    caseSensitive;
+    wholeWord;
+    // Use untrack to read matches without subscribing
+    const len = $state.snapshot(matches).length;
+    currentMatchIndex = len > 0 ? 0 : -1;
+});
+```
+
+Actually, the cleanest approach: use Svelte's `untrack` to read `matches` without creating a dependency:
+
+```js
+import { untrack } from "svelte";
+
+$effect(() => {
+    debouncedQuery;
+    caseSensitive;
+    wholeWord;
+    currentMatchIndex = untrack(() => matches.length) > 0 ? 0 : -1;
+});
+```
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/components/PdfViewer.svelte` | Import `untrack`, fix reset effect to not depend on `matches.length` |
+
+## Verification
+1. `pnpm run check` — no TS errors
+2. `pnpm run dev` → open PDF → search immediately
+3. Navigate next/prev — should advance through all matches without resetting
+4. Changing query/case/wholeWord should still reset to first match
+5. `pnpm run build` — succeeds
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+ha! solution is surprisingly simple. beautiful.
