@@ -1,0 +1,106 @@
+Implement the following plan:
+
+# Plan: Split PDF Feature
+
+## Context
+Users want to split a single PDF into multiple PDFs. This requires:
+1. A new multi-column grid layout (max 6 columns) so pages are compact enough to see split points
+2. Clickable divider lines between pages to mark split points
+3. Export functionality to produce the split PDFs as downloads
+
+## Approach
+
+### New dependency: `pdf-lib`
+Use `pdf-lib` (pure JS, no Wasm) for the export step. PDFium's `_FPDF_SaveAsCopy` uses a C-style callback struct (`FPDF_FILEWRITE`) requiring Emscripten `addFunction` — complex and fragile. `pdf-lib` loads the original PDF bytes, copies page ranges, and serializes to `Uint8Array` trivially. We keep the original `File` bytes in memory for this purpose.
+
+### Step-by-step
+
+#### 1. Add `pdf-lib` dependency
+- `pnpm add pdf-lib`
+
+#### 2. Store original PDF bytes (`src/routes/+page.svelte`)
+- Keep the `Uint8Array` from `file.arrayBuffer()` in state (e.g. `pdfBytes`)
+- Pass it down to `PdfViewer` as a prop
+
+#### 3. Add split state to `PdfViewer.svelte`
+- `splitMode: boolean` — toggled by a button in the toolbar area
+- `splitPoints: Set<number>` — stores page indices *after* which a split occurs (e.g. `{2, 5}` means split after page 2 and after page 5)
+- When `splitMode` is off, layout and behavior are unchanged (single column viewer)
+
+#### 4. Change layout to multi-column grid (`PdfViewer.svelte`)
+- When `splitMode` is on, switch `.pages-container` from `flex-direction: column` to CSS grid
+- `grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))` with `max-width` capping at 6 columns
+- CSS-scale pages down to fit columns (no re-render — use `transform: scale()` or `width: 100%` on wrapper)
+- Each page shows its page number label
+- Search remains fully functional in split mode
+
+#### 5. Add split divider lines between pages
+- Between every two adjacent pages, render a clickable divider element
+- In grid layout, the divider spans a full row when it represents a split boundary, or appears as a subtle horizontal line within the grid flow
+- **Simpler approach**: Render pages in a grid. Below each page (except the last), show a small "split here" indicator. When clicked, it toggles that index in `splitPoints`. Selected split points get a prominent colored line.
+- Visual: unselected = subtle dashed line; selected = solid blue/red line with scissors icon or "split" label
+
+#### 6. Create split/export service (`src/lib/services/splitPdf.ts`)
+- Function: `splitPdf(pdfBytes: Uint8Array, splitPoints: number[]): Promise<Uint8Array[]>`
+- Uses `pdf-lib`:
+  ```
+  const srcDoc = await PDFDocument.load(pdfBytes)
+  // splitPoints sorted → compute ranges → for each range, copyPages into new doc → save
+  ```
+- Returns array of `Uint8Array`, one per split segment
+
+#### 7. Add export button & download logic (`PdfViewer.svelte`)
+- "Export Split PDFs" button, visible when `splitPoints.size > 0`
+- On click: call `splitPdf()`, then trigger browser downloads for each segment
+- Download via `URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))` + temporary `<a>` click
+- File names: `split-1.pdf`, `split-2.pdf`, etc. (no custom naming per requirements)
+
+#### 8. Add "Split Mode" toggle to toolbar (`+page.svelte`)
+- Button next to "Open PDF" to enter/exit split mode
+- Passes `splitMode` and `splitPoints` down to `PdfViewer`
+
+## Files to modify
+- `src/routes/+page.svelte` — store pdfBytes, add split mode toggle button
+- `src/lib/components/PdfViewer.svelte` — split state, grid layout, dividers, export button
+- `src/lib/components/PdfPage.svelte` — minor: accept optional smaller scale for thumbnail mode
+- `src/lib/types.ts` — (possibly) no changes needed, split state is local
+
+## Files to create
+- `src/lib/services/splitPdf.ts` — pdf-lib based split + serialize
+
+## Verification
+1. `pnpm run check` — TypeScript compiles with 0 errors
+2. `pnpm run dev` — open browser, load a multi-page PDF
+3. Click "Split Mode" — layout switches to multi-column grid
+4. Click divider between pages 2 and 3 — line turns solid/highlighted
+5. Click "Export" — browser downloads `split-1.pdf` (pages 1-2) and `split-2.pdf` (pages 3+)
+6. Open downloaded PDFs — correct pages, renders properly
+7. Click the same divider again — deselects, export would produce 1 file (the whole PDF, so button could hide)
+8. Exit split mode — layout returns to single-column viewer
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+in split mode, lower rows are overlapping the parent rows
+
+---
+
+nice. can we place split-line between paes, like side-by-side? it will be more intuitive
+
+---
+
+no, now all pages are in a single column in the split mode.
+
+---
+
+nice. can you increase the width of split lines? it's hard to find at a glance, untill hovering on it. did you remove a nice sciessors icon? i kind of liked it
+
+---
+
+how hard to make page scalable by user?
+
+---
+
+yeah

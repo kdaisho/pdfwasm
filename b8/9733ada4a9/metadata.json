@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "b89733ada4a9",
+  "strategy": "manual-commit",
+  "branch": "splittable",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/lib/components/PdfViewer.svelte"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b8/9733ada4a9/0/metadata.json",
+      "transcript": "/b8/9733ada4a9/0/full.jsonl",
+      "context": "/b8/9733ada4a9/0/context.md",
+      "content_hash": "/b8/9733ada4a9/0/content_hash.txt",
+      "prompt": "/b8/9733ada4a9/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 17,
+    "cache_creation_tokens": 4000,
+    "cache_read_tokens": 743124,
+    "output_tokens": 831,
+    "api_call_count": 13
+  }
+}
