@@ -13,7 +13,8 @@
 	let pages: PageData[] = $state([]);
 	let docLoading = $state(false);
 	let docError: Error | null = $state(null);
-	let currentDoc: PDFiumDocument | null = null;
+	let currentDoc: PDFiumDocument | null = $state(null);
+	let charExtractionId = 0;
 
 	onMount(() => {
 		getPdfiumLibrary()
@@ -38,43 +39,47 @@
 		currentDoc?.destroy();
 		currentDoc = null;
 
+		// Cancel any in-progress background char extraction
+		const extractionId = ++charExtractionId;
+
 		try {
 			const buffer = await file.arrayBuffer();
 			const uint8 = new Uint8Array(buffer);
 			const doc = await library.loadDocument(uint8);
 			currentDoc = doc;
 
+			// Phase 1: Build page metadata instantly (no render, no char extraction)
+			const pageCount = doc.getPageCount();
 			const pageDataList: PageData[] = [];
 
-			for (const page of doc.pages()) {
-				const chars = extractCharBoxes(page);
-				const rendered = await page.render({
-					scale: RENDER_SCALE,
-					render: "bitmap",
-				});
-
-				const imageData = new ImageData(
-					new Uint8ClampedArray(rendered.data.buffer),
-					rendered.width,
-					rendered.height,
-				);
-
+			for (let i = 0; i < pageCount; i++) {
+				const page = doc.getPage(i);
+				const size = page.getSize(true);
 				pageDataList.push({
-					index: page.number,
-					imageData,
-					width: rendered.width,
-					height: rendered.height,
-					originalWidth: rendered.originalWidth,
-					originalHeight: rendered.originalHeight,
-					chars,
+					index: i,
+					originalWidth: size.width,
+					originalHeight: size.height,
+					width: Math.round(size.width * RENDER_SCALE),
+					height: Math.round(size.height * RENDER_SCALE),
+					chars: [],
 					scale: RENDER_SCALE,
 				});
 			}
 
 			pages = pageDataList;
+			docLoading = false;
+
+			// Phase 2: Background char extraction for search
+			for (let i = 0; i < pageCount; i++) {
+				if (extractionId !== charExtractionId) return;
+				const page = doc.getPage(i);
+				const chars = extractCharBoxes(page);
+				pages[i].chars = chars;
+				// Yield to main thread between pages
+				await new Promise((r) => setTimeout(r, 0));
+			}
 		} catch (err: unknown) {
 			docError = err instanceof Error ? err : new Error(String(err));
-		} finally {
 			docLoading = false;
 		}
 	}
@@ -111,8 +116,8 @@
 			{/if}
 		</div>
 
-		{#if pages.length > 0}
-			<PdfViewer {pages} />
+		{#if pages.length > 0 && currentDoc}
+			<PdfViewer {pages} doc={currentDoc} />
 		{:else if !docLoading}
 			<div class="center">Open a PDF file to get started.</div>
 		{/if}

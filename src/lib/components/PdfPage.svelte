@@ -1,16 +1,21 @@
 <script lang="ts">
+	import type { PDFiumDocument } from "@hyzyla/pdfium";
+	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import type { PageData, SearchMatch } from "$lib/types";
 
 	interface Props {
 		page: PageData;
 		matches: SearchMatch[];
 		activeCharIndex: number;
+		doc: PDFiumDocument;
 	}
 
-	let { page, matches, activeCharIndex }: Props = $props();
+	let { page, matches, activeCharIndex, doc }: Props = $props();
 
-	let renderCanvas: HTMLCanvasElement;
-	let overlayCanvas: HTMLCanvasElement;
+	let renderCanvas: HTMLCanvasElement = $state(undefined!);
+	let overlayCanvas: HTMLCanvasElement = $state(undefined!);
+	let rendering = $state(false);
+	let localImageData: ImageData | null = $state(null);
 
 	function pdfToCanvas(
 		left: number,
@@ -28,14 +33,54 @@
 		};
 	}
 
+	async function renderPage() {
+		if (localImageData || rendering) return;
+		rendering = true;
+		try {
+			const pdfPage = doc.getPage(page.index);
+			// Extract chars if not yet populated (visible pages get priority)
+			if (page.chars.length === 0) {
+				page.chars = extractCharBoxes(pdfPage);
+			}
+			const rendered = await pdfPage.render({
+				scale: RENDER_SCALE,
+				render: "bitmap",
+			});
+			localImageData = new ImageData(
+				new Uint8ClampedArray(rendered.data.buffer),
+				rendered.width,
+				rendered.height,
+			);
+		} finally {
+			rendering = false;
+		}
+	}
+
+	function observe(node: HTMLDivElement) {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					void renderPage();
+				}
+			},
+			{ rootMargin: "200px" },
+		);
+		observer.observe(node);
+		return {
+			destroy() {
+				observer.disconnect();
+			},
+		};
+	}
+
 	// Paint rendered bitmap
 	$effect(() => {
-		if (!renderCanvas) return;
+		if (!renderCanvas || !localImageData) return;
 		const ctx = renderCanvas.getContext("2d");
 		if (!ctx) return;
 		renderCanvas.width = page.width;
 		renderCanvas.height = page.height;
-		ctx.putImageData(page.imageData, 0, 0);
+		ctx.putImageData(localImageData, 0, 0);
 	});
 
 	// Draw search highlights
@@ -85,9 +130,18 @@
 <div
 	class="page-wrapper"
 	style="width: {page.width}px; height: {page.height}px;"
+	use:observe
 >
-	<canvas bind:this={renderCanvas} class="layer"></canvas>
-	<canvas bind:this={overlayCanvas} class="layer"></canvas>
+	{#if localImageData}
+		<canvas bind:this={renderCanvas} class="layer"></canvas>
+		<canvas bind:this={overlayCanvas} class="layer"></canvas>
+	{:else}
+		<div class="placeholder">
+			{#if rendering}
+				<span class="spinner"></span>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -99,5 +153,26 @@
 		position: absolute;
 		top: 0;
 		left: 0;
+	}
+	.placeholder {
+		width: 100%;
+		height: 100%;
+		background: #f0f0f0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.spinner {
+		width: 32px;
+		height: 32px;
+		border: 3px solid #ddd;
+		border-top-color: #4f6ef7;
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+	}
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

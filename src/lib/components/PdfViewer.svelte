@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { PDFiumDocument } from "@hyzyla/pdfium";
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
 	import PdfPage from "./PdfPage.svelte";
@@ -6,9 +7,10 @@
 
 	interface Props {
 		pages: PageData[];
+		doc: PDFiumDocument;
 	}
 
-	let { pages }: Props = $props();
+	let { pages, doc }: Props = $props();
 
 	let query = $state("");
 	let debouncedQuery = $state("");
@@ -154,7 +156,7 @@
 					? matches[currentMatchIndex].charIndex
 					: -1}
 			<div use:trackPageRef={page.index}>
-				<PdfPage {page} matches={pageMatches} {activeCharIndex} />
+				<PdfPage {page} matches={pageMatches} {activeCharIndex} {doc} />
 			</div>
 		{/each}
 	</div>

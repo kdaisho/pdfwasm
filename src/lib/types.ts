@@ -7,10 +7,10 @@ export interface CharBox {
 	top: number;
 }
 
-/** Rendered page data — holds the bitmap and all character positions */
+/** Rendered page data — holds the bitmap (on-demand) and all character positions */
 export interface PageData {
 	index: number;
-	imageData: ImageData;
+	imageData?: ImageData;
 	/** Rendered width in pixels */
 	width: number;
 	/** Rendered height in pixels */
