@@ -96,20 +96,42 @@
 
 		function drawMatch(match: SearchMatch, color: string) {
 			ctx!.fillStyle = color;
-			for (
-				let i = match.charIndex;
-				i < match.charIndex + match.charCount;
-				i++
-			) {
+
+			// Collect all valid chars in the match
+			const chars: { left: number; right: number; bottom: number; top: number }[] = [];
+			for (let i = match.charIndex; i < match.charIndex + match.charCount; i++) {
 				const c = page.chars[i];
-				if (!c) continue;
+				if (c) chars.push(c);
+			}
+			if (chars.length === 0) return;
+
+			// Group characters into lines: a new line starts when top diverges
+			// by more than half the previous char's height
+			const lines: (typeof chars)[] = [[chars[0]]];
+			for (let i = 1; i < chars.length; i++) {
+				const prev = chars[i - 1];
+				const cur = chars[i];
+				const charHeight = prev.top - prev.bottom;
+				if (Math.abs(cur.top - prev.top) > charHeight * 0.5) {
+					lines.push([cur]); // new line
+				} else {
+					lines[lines.length - 1].push(cur);
+				}
+			}
+
+			// Draw one merged rect per line
+			for (const line of lines) {
+				let minLeft = Infinity, maxRight = -Infinity;
+				let minBottom = Infinity, maxTop = -Infinity;
+				for (const c of line) {
+					if (c.left < minLeft) minLeft = c.left;
+					if (c.right > maxRight) maxRight = c.right;
+					if (c.bottom < minBottom) minBottom = c.bottom;
+					if (c.top > maxTop) maxTop = c.top;
+				}
 				const { x, y, w, h } = pdfToCanvas(
-					c.left,
-					c.right,
-					c.bottom,
-					c.top,
-					page.originalHeight,
-					page.scale,
+					minLeft, maxRight, minBottom, maxTop,
+					page.originalHeight, page.scale,
 				);
 				if (w > 0 && h > 0) ctx!.fillRect(x, y, w, h);
 			}
