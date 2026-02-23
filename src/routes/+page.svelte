@@ -15,6 +15,8 @@
 	let docError: Error | null = $state(null);
 	let currentDoc: PDFiumDocument | null = $state(null);
 	let charExtractionId = 0;
+	let pdfBytes: Uint8Array | null = $state(null);
+	let splitMode = $state(false);
 
 	onMount(() => {
 		getPdfiumLibrary()
@@ -35,6 +37,7 @@
 		docLoading = true;
 		docError = null;
 		pages = [];
+		splitMode = false;
 
 		currentDoc?.destroy();
 		currentDoc = null;
@@ -45,6 +48,7 @@
 		try {
 			const buffer = await file.arrayBuffer();
 			const uint8 = new Uint8Array(buffer);
+			pdfBytes = uint8;
 			const doc = await library.loadDocument(uint8);
 			currentDoc = doc;
 
@@ -108,6 +112,17 @@
 					style="display:none"
 				/>
 			</label>
+			{#if pages.length > 0}
+				<button
+					class="button"
+					class:button-active={splitMode}
+					onclick={() => {
+						splitMode = !splitMode;
+					}}
+				>
+					{splitMode ? "Exit Split Mode" : "Split Mode"}
+				</button>
+			{/if}
 			{#if docLoading}
 				<span class="status">Rendering pages…</span>
 			{/if}
@@ -116,8 +131,8 @@
 			{/if}
 		</div>
 
-		{#if pages.length > 0 && currentDoc}
-			<PdfViewer {pages} doc={currentDoc} />
+		{#if pages.length > 0 && currentDoc && pdfBytes}
+			<PdfViewer {pages} doc={currentDoc} {splitMode} {pdfBytes} />
 		{:else if !docLoading}
 			<div class="center">Open a PDF file to get started.</div>
 		{/if}
@@ -150,10 +165,14 @@
 		padding: 6px 14px;
 		background: #4f6ef7;
 		color: #fff;
+		border: none;
 		border-radius: 4px;
 		cursor: pointer;
 		font-size: 14px;
 		user-select: none;
+	}
+	.button-active {
+		background: #e74c3c;
 	}
 	.status {
 		font-size: 13px;

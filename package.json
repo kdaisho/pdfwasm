@@ -10,7 +10,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
 	},
 	"dependencies": {
-		"@hyzyla/pdfium": "^2.1.9"
+		"@hyzyla/pdfium": "^2.1.9",
+		"pdf-lib": "^1.17.1"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-static": "^3.0.10",
