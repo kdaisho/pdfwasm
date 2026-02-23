@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "e04bedf451d1",
+  "session_id": "4809df0d-ae4d-40f0-a8f8-4a06b6b0d072",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-23T02:28:51.134084Z",
+  "branch": "improve-search-highlighting",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "src/lib/components/PdfPage.svelte"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 7,
+    "cache_creation_tokens": 6278,
+    "cache_read_tokens": 111151,
+    "output_tokens": 123,
+    "api_call_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-23T02:28:51.102069Z",
+    "agent_lines": 34,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 34,
+    "agent_percentage": 100
+  }
+}

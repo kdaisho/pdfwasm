@@ -1,0 +1,31 @@
+Implement the following plan:
+
+# Plan: Improve search highlight rendering
+
+## Context
+Text search highlights are drawn per-character using exact PDFium bounding boxes. This makes highlights hard to see because each character has a slightly different height (e.g., "a" vs "T") and there are tiny gaps between character boxes. The goal is to render highlights as continuous, full-height rectangles — like browser-style text selection.
+
+## Change
+
+**File:** `src/lib/components/PdfPage.svelte` — modify `drawMatch()` (lines 97-116)
+
+Instead of drawing one `fillRect()` per character, merge all characters in a match into a single bounding rectangle:
+
+1. Iterate all chars in the match to compute:
+   - `minLeft` = min of all `c.left`
+   - `maxRight` = max of all `c.right`
+   - `minBottom` = min of all `c.bottom`
+   - `maxTop` = max of all `c.top`
+2. Convert the merged box with `pdfToCanvas(minLeft, maxRight, minBottom, maxTop, ...)`
+3. Draw one `fillRect()` for the entire match
+
+**Multi-line handling:** If a match spans multiple lines, characters will have very different Y coordinates. Group characters into lines (detect line breaks when `top` values diverge by more than half the char height), then draw one merged rect per line.
+
+## Verification
+- `pnpm run dev` — open a PDF, search for a word
+- Confirm highlights are full-height continuous rectangles with no gaps
+- Test with multi-line matches (if applicable) and single-character matches
+- Verify active (orange) vs non-active (yellow) highlights still render correctly
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
