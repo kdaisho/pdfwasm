@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "50d04a4411fc",
+  "session_id": "1c9efee6-82f8-4bb4-a1f7-f6a9dbc3ffd1",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-24T13:44:25.906511Z",
+  "branch": "ui-lib",
+  "checkpoints_count": 3,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "src/app.css",
+    "src/app.html",
+    "src/lib/components/PdfViewer.svelte",
+    "src/lib/components/SearchBar.svelte",
+    "src/routes/+page.svelte",
+    "vite.config.ts"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 75,
+    "cache_creation_tokens": 89964,
+    "cache_read_tokens": 2962791,
+    "output_tokens": 2486,
+    "api_call_count": 65
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-24T13:44:25.756649Z",
+    "agent_lines": 0,
+    "human_added": 1020,
+    "human_modified": 6,
+    "human_removed": 0,
+    "total_committed": 1020,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-daishokomiyama-Code-pdfwasm/1c9efee6-82f8-4bb4-a1f7-f6a9dbc3ffd1.jsonl"
+}

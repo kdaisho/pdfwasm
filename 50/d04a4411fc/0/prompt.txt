@@ -1,0 +1,100 @@
+Implement the following plan:
+
+# Plan: Integrate Skeleton UI into pdfwasm
+
+## Context
+
+The project currently uses hand-written scoped CSS with hardcoded colors. We want to bring in **Skeleton v4** (skeleton.dev) as the UI component library to get a polished, themeable design system with dark mode support. Skeleton is built on Tailwind CSS 4 and provides both Tailwind utility classes and pre-built Svelte components.
+
+## Step 1: Install dependencies
+
+```bash
+pnpm add -D @skeletonlabs/skeleton @skeletonlabs/skeleton-svelte tailwindcss
+```
+
+Skeleton v4 requires: SvelteKit 2+ (have it), Svelte 5+ (have it), Tailwind 4+.
+
+## Step 2: Create global stylesheet with Skeleton imports
+
+Replace `src/app.css` content with:
+
+```css
+@import 'tailwindcss';
+@import '@skeletonlabs/skeleton';
+@import '@skeletonlabs/skeleton-svelte';
+@import '@skeletonlabs/skeleton/themes/rocket';
+```
+
+This sets up Tailwind 4 + Skeleton's design tokens + the `rocket` theme.
+
+## Step 3: Add theme attribute to `app.html`
+
+Update `<html lang="en">` to `<html lang="en" data-theme="rocket">`.
+
+## Step 4: Migrate `+page.svelte` toolbar
+
+Replace hand-written toolbar with Skeleton components:
+- **AppBar** for the top toolbar (title + buttons)
+- Skeleton button classes (`btn preset-filled`) for "Open PDF" and "Split Mode"
+- Use Skeleton's text/color utilities for status/error messages
+
+## Step 5: Migrate `SearchBar.svelte`
+
+- Use Skeleton's form input classes for the search input
+- Use Skeleton's button/chip classes for the toggle buttons (Aa, W)
+- Use Skeleton's badge or text styles for match count
+- Navigation buttons (↑↓) use Skeleton button variants
+
+## Step 6: Migrate `PdfViewer.svelte` split toolbar
+
+- Use Skeleton's Slider component or styled range input
+- Export button uses Skeleton button preset classes
+- Split info text uses Skeleton typography utilities
+
+## Step 7: Remove old scoped CSS
+
+As each component is migrated, remove the `<style>` blocks that are replaced by Tailwind utility classes and Skeleton component classes. Keep any layout-specific CSS that isn't covered by Skeleton (e.g., canvas overlay positioning, split grid layout).
+
+## Files to modify
+
+1. `package.json` — new dependencies (via pnpm)
+2. `src/app.css` — replace with Skeleton/Tailwind imports
+3. `src/app.html` — add `data-theme`
+4. `src/routes/+page.svelte` — toolbar → AppBar + Skeleton classes
+5. `src/lib/components/SearchBar.svelte` — inputs/buttons → Skeleton classes
+6. `src/lib/components/PdfViewer.svelte` — split toolbar → Skeleton classes
+
+Files NOT modified (no UI changes needed):
+- `src/lib/components/PdfPage.svelte` — canvas rendering, keep as-is
+- `src/lib/services/*` — business logic, untouched
+
+## Verification
+
+1. `pnpm run dev` — dev server starts without errors
+2. `pnpm run check` — TypeScript/Svelte check passes
+3. Visual check: theme applied, toolbar styled, search bar functional, split mode works
+4. Dark mode toggle test (if applicable via theme)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+[plugin:vite:css] [postcss] postcss-import: /Users/daishokomiyama/Code/pdfwasm/node_modules/.pnpm/@skeletonlabs+skeleton-svelte@4.12.0_svelte@5.53.0/node_modules/@skeletonlabs/skeleton-svelte/dist/index.js:1:1: Unknown word export
+/Users/daishokomiyama/Code/pdfwasm/node_modules/.pnpm/@skeletonlabs+skeleton-svelte@4.12.0_svelte@5.53.0/node_modules/@skeletonlabs/skeleton-svelte/dist/index.js:1:0
+1  |  export * from './components/accordion/index.js';
+   |  ^
+2  |  export * from './components/app-bar/index.js';
+3  |  export * from './components/avatar/index.js';
+
+---
+
+now, it got worse. the button for opening PDF doesn't look like a button anymore
+
+---
+
+tailwindcss will tree-shake with my setup?
+
+---
+
+what do you mean by "You'd only lose tree-shaking"? Would I lose the classname in prod?
