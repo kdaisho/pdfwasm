@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { AppBar } from "@skeletonlabs/skeleton-svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
@@ -96,90 +97,68 @@
 </script>
 
 {#if libLoading}
-	<div class="center">Loading PDFium Wasm…</div>
+	<div
+		class="flex items-center justify-center h-[80vh] text-lg text-surface-500"
+	>
+		Loading PDFium Wasm…
+	</div>
 {:else if libError}
-	<div class="center">Failed to load PDFium: {libError.message}</div>
+	<div
+		class="flex items-center justify-center h-[80vh] text-lg text-error-500"
+	>
+		Failed to load PDFium: {libError.message}
+	</div>
 {:else}
 	<div>
-		<div class="toolbar">
-			<h2 class="title">PDF Viewer</h2>
-			<label class="button">
-				Open PDF
-				<input
-					type="file"
-					accept=".pdf"
-					onchange={handleFileChange}
-					style="display:none"
-				/>
-			</label>
-			{#if pages.length > 0}
-				<button
-					class="button"
-					class:button-active={splitMode}
-					onclick={() => {
-						splitMode = !splitMode;
-					}}
-				>
-					{splitMode ? "Exit Split Mode" : "Split Mode"}
-				</button>
-			{/if}
-			{#if docLoading}
-				<span class="status">Rendering pages…</span>
-			{/if}
-			{#if docError}
-				<span class="error-text">Error: {docError.message}</span>
-			{/if}
-		</div>
+		<AppBar>
+			<AppBar.Toolbar>
+				<AppBar.Lead>
+					<h2 class="text-lg font-semibold">PDF Viewer</h2>
+				</AppBar.Lead>
+				<AppBar.Trail>
+					<label class="btn preset-filled cursor-pointer">
+						Open PDF
+						<input
+							type="file"
+							accept=".pdf"
+							onchange={handleFileChange}
+							class="hidden"
+						/>
+					</label>
+					{#if pages.length > 0}
+						<button
+							class="btn {splitMode
+								? 'preset-filled-error-500'
+								: 'preset-filled'}"
+							onclick={() => {
+								splitMode = !splitMode;
+							}}
+						>
+							{splitMode ? "Exit Split Mode" : "Split Mode"}
+						</button>
+					{/if}
+					{#if docLoading}
+						<span class="text-sm text-surface-500"
+							>Rendering pages…</span
+						>
+					{/if}
+					{#if docError}
+						<span class="text-sm text-error-500"
+							>Error: {docError.message}</span
+						>
+					{/if}
+				</AppBar.Trail>
+			</AppBar.Toolbar>
+		</AppBar>
 
 		{#if pages.length > 0 && currentDoc && pdfBytes}
 			<PdfViewer {pages} doc={currentDoc} {splitMode} {pdfBytes} />
 		{:else if !docLoading}
-			<div class="center">Open a PDF file to get started.</div>
+			<div
+				class="flex items-center justify-center h-[80vh] text-lg text-surface-500"
+			>
+				Open a PDF file to get started.
+			</div>
 		{/if}
 	</div>
 {/if}
-
-<style>
-	.center {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		height: 80vh;
-		font-size: 18px;
-		color: #555;
-	}
-	.toolbar {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		padding: 10px 16px;
-		background: #f5f5f5;
-		border-bottom: 1px solid #ddd;
-	}
-	.title {
-		margin: 0;
-		font-size: 18px;
-		font-weight: 600;
-	}
-	.button {
-		padding: 6px 14px;
-		background: #4f6ef7;
-		color: #fff;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		user-select: none;
-	}
-	.button-active {
-		background: #e74c3c;
-	}
-	.status {
-		font-size: 13px;
-		color: #555;
-	}
-	.error-text {
-		font-size: 13px;
-		color: #c00;
-	}
-</style>

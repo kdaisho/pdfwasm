@@ -180,8 +180,8 @@
 	/>
 
 	{#if splitMode}
-		<div class="split-toolbar">
-			<label class="scale-control">
+		<div class="flex items-center justify-center gap-3 px-4 py-2 bg-warning-100-900 border-b border-warning-400-600">
+			<label class="flex items-center gap-1.5 text-sm text-warning-800-200">
 				Size
 				<input
 					type="range"
@@ -189,14 +189,19 @@
 					max="400"
 					step="10"
 					bind:value={thumbnailWidth}
+					class="w-[100px] cursor-pointer"
 				/>
 			</label>
 			{#if splitPoints.size > 0}
-				<span class="split-info">
+				<span class="text-sm text-warning-800-200">
 					{splitPoints.size} split point{splitPoints.size > 1 ? "s" : ""} selected
 					&rarr; {splitPoints.size + 1} files
 				</span>
-				<button class="export-button" onclick={handleExport} disabled={exporting}>
+				<button
+					class="btn btn-sm preset-filled-success-500"
+					onclick={handleExport}
+					disabled={exporting}
+				>
 					{exporting ? "Exporting…" : "Export Split PDFs"}
 				</button>
 			{/if}
@@ -215,7 +220,7 @@
 					: -1}
 			<div class="page-cell" use:trackPageRef={page.index}>
 				{#if splitMode}
-					<div class="page-number">Page {page.index + 1}</div>
+					<div class="text-xs text-surface-500 mb-1 font-medium">Page {page.index + 1}</div>
 				{/if}
 				<div
 					class="page-scale-wrapper"
@@ -241,6 +246,7 @@
 </div>
 
 <style>
+	/* Layout-specific styles that can't be expressed as pure Tailwind utilities */
 	.pages-container {
 		display: flex;
 		flex-direction: column;
@@ -265,12 +271,6 @@
 	}
 	.split-grid .page-cell {
 		width: var(--thumb-width, 180px);
-	}
-	.page-number {
-		font-size: 12px;
-		color: #666;
-		margin-bottom: 4px;
-		font-weight: 500;
 	}
 	.page-scale-wrapper {
 		width: 100%;
@@ -308,23 +308,23 @@
 		width: 4px;
 		height: 100%;
 		min-height: 40px;
-		background: #ccc;
 		border-radius: 2px;
 		transition: background 0.15s, width 0.15s;
+		background: var(--color-surface-300);
 	}
 	.split-divider:hover .split-divider-line {
-		background: #4f6ef7;
+		background: var(--color-primary-500);
 		width: 5px;
 	}
 	.split-divider.split-active .split-divider-line {
-		background: #e74c3c;
+		background: var(--color-error-500);
 		width: 5px;
 	}
 	.split-label {
 		position: absolute;
 		font-size: 16px;
-		color: #aaa;
-		background: white;
+		color: var(--color-surface-400);
+		background: var(--color-surface-50);
 		border-radius: 50%;
 		width: 26px;
 		height: 26px;
@@ -335,52 +335,11 @@
 		transition: color 0.15s, box-shadow 0.15s;
 	}
 	.split-divider:hover .split-label {
-		color: #4f6ef7;
+		color: var(--color-primary-500);
 		box-shadow: 0 1px 4px rgba(79, 110, 247, 0.3);
 	}
 	.split-label-active {
-		color: #e74c3c !important;
+		color: var(--color-error-500) !important;
 		box-shadow: 0 1px 6px rgba(231, 76, 60, 0.35) !important;
-	}
-	.split-toolbar {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 12px;
-		padding: 8px 16px;
-		background: #fff3cd;
-		border-bottom: 1px solid #ffc107;
-	}
-	.scale-control {
-		display: flex;
-		align-items: center;
-		gap: 6px;
-		font-size: 13px;
-		color: #856404;
-	}
-	.scale-control input[type="range"] {
-		width: 100px;
-		cursor: pointer;
-	}
-	.split-info {
-		font-size: 13px;
-		color: #856404;
-	}
-	.export-button {
-		padding: 6px 16px;
-		background: #28a745;
-		color: #fff;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 13px;
-		font-weight: 500;
-	}
-	.export-button:hover {
-		background: #218838;
-	}
-	.export-button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
 	}
 </style>
