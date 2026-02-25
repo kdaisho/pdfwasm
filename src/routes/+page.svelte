@@ -111,7 +111,7 @@
 {:else}
 	<div>
 		<AppBar>
-			<AppBar.Toolbar>
+			<AppBar.Toolbar class="px-4 py-2 flex gap-4">
 				<AppBar.Lead>
 					<h2 class="text-lg font-semibold">PDF Viewer</h2>
 				</AppBar.Lead>
