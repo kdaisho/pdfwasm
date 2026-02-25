@@ -1,0 +1,133 @@
+Implement the following plan:
+
+# Plan: ESLint Setup for pdfwasm
+
+## Context
+The project (SvelteKit + Svelte 5 + TypeScript) has no ESLint configuration. Only Prettier and `svelte-check` are in place. The user wants ESLint with `eslint-plugin-tree-shaking` and sensible recommended rules. Using ESLint v9 flat config format (modern standard, required for ESM projects with `"type": "module"`).
+
+---
+
+## Packages to Install
+
+```
+pnpm add -D eslint @eslint/js typescript-eslint eslint-plugin-svelte svelte-eslint-parser eslint-config-prettier eslint-plugin-tree-shaking
+```
+
+| Package | Purpose |
+|---|---|
+| `eslint` | Core linter |
+| `@eslint/js` | Base JS recommended rules |
+| `typescript-eslint` | TS rules + parser (v8, native flat config support) |
+| `eslint-plugin-svelte` | Svelte 5 lint rules |
+| `svelte-eslint-parser` | Required by eslint-plugin-svelte |
+| `eslint-config-prettier` | Disables formatting rules that conflict with Prettier |
+| `eslint-plugin-tree-shaking` | Flags side-effect-ful module initializations |
+
+---
+
+## File to Create: `eslint.config.js`
+
+```js
+import js from '@eslint/js';
+import ts from 'typescript-eslint';
+import svelte from 'eslint-plugin-svelte';
+import prettier from 'eslint-config-prettier';
+import treeShaking from 'eslint-plugin-tree-shaking';
+
+export default ts.config(
+  // 1. Global ignores
+  {
+    ignores: ['.svelte-kit/', 'build/', 'node_modules/', 'dist/'],
+  },
+
+  // 2. Base JS + TS recommended
+  js.configs.recommended,
+  ...ts.configs.recommended,
+
+  // 3. Svelte recommended + Prettier override (Svelte files)
+  ...svelte.configs['flat/recommended'],
+  ...svelte.configs['flat/prettier'],
+
+  // 4. Prettier formatting override (all files)
+  prettier,
+
+  // 5. Tree-shaking plugin
+  {
+    plugins: { 'tree-shaking': treeShaking },
+    rules: {
+      'tree-shaking/no-side-effects-in-initialization': 'warn',
+    },
+  },
+
+  // 6. Svelte file parser (must reference TS parser for <script lang="ts">)
+  {
+    files: ['**/*.svelte'],
+    languageOptions: {
+      parserOptions: {
+        parser: ts.parser,
+      },
+    },
+  },
+
+  // 7. Project-wide custom rules
+  {
+    rules: {
+      'no-console': 'warn',
+      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      'prefer-const': 'error',
+      'no-unused-expressions': 'error',
+
+      // TS-specific
+      '@typescript-eslint/no-explicit-any': 'warn',     // charBoxes.ts uses (page as any)
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
+    },
+  },
+);
+```
+
+### Rule rationale
+- `tree-shaking/no-side-effects-in-initialization`: **warn** (not error) — PDFium singleton init and Svelte component patterns can trigger false positives; warn lets us audit without blocking
+- `no-console`: **warn** — useful to catch debug logs without hard-failing
+- `eqeqeq` with `null: 'ignore'`: allows `== null` for combined null/undefined checks (common Svelte/TS pattern)
+- `@typescript-eslint/no-explicit-any`: **warn** — `charBoxes.ts` legitimately uses `(page as any).module` for raw Wasm access; warning acknowledges the risk without blocking
+- `@typescript-eslint/consistent-type-imports`: keeps `import type` usage consistent across the codebase
+
+---
+
+## Script to Add in `package.json`
+
+Add to `"scripts"`:
+```json
+"lint": "eslint src",
+"lint:fix": "eslint src --fix"
+```
+
+---
+
+## Critical Files
+- **Create:** `eslint.config.js` (project root)
+- **Modify:** `package.json` — add `lint` and `lint:fix` scripts
+
+---
+
+## Verification
+1. `pnpm add -D ...` installs all packages cleanly
+2. `pnpm run lint` runs without crashing (some warnings expected from `no-console` and `no-explicit-any`)
+3. `pnpm run lint:fix` auto-fixes fixable issues
+4. `pnpm run check` (svelte-check) still passes — ESLint shouldn't interfere with type checking
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/daishokomiyama/.REDACTED.jsonl
+
+---
+
+seems eslint ts.config is deprecated. make sure it.
+
+---
+
+tell me why prettier doesn't take effect for eslint.config.js?
+
+---
+
+can we set no-console, but allow warn or error?
