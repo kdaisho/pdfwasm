@@ -26,6 +26,7 @@
 	let thumbnailWidth = $state(180);
 
 	let searchInput: HTMLInputElement | undefined = $state();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, tracks DOM refs imperatively via bind:this
 	let pageElements = new Map<number, HTMLDivElement>();
 
 	$effect(() => {
@@ -84,6 +85,7 @@
 	});
 
 	function toggleSplitPoint(pageIndex: number) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway copy, not reactive state
 		const next = new Set(splitPoints);
 		if (next.has(pageIndex)) {
 			next.delete(pageIndex);
@@ -180,8 +182,12 @@
 	/>
 
 	{#if splitMode}
-		<div class="flex items-center justify-center gap-3 px-4 py-2 bg-warning-100-900 border-b border-warning-400-600">
-			<label class="flex items-center gap-1.5 text-sm text-warning-800-200">
+		<div
+			class="flex items-center justify-center gap-3 px-4 py-2 bg-warning-100-900 border-b border-warning-400-600"
+		>
+			<label
+				class="flex items-center gap-1.5 text-sm text-warning-800-200"
+			>
 				Size
 				<input
 					type="range"
@@ -194,8 +200,9 @@
 			</label>
 			{#if splitPoints.size > 0}
 				<span class="text-sm text-warning-800-200">
-					{splitPoints.size} split point{splitPoints.size > 1 ? "s" : ""} selected
-					&rarr; {splitPoints.size + 1} files
+					{splitPoints.size} split point{splitPoints.size > 1
+						? "s"
+						: ""} selected &rarr; {splitPoints.size + 1} files
 				</span>
 				<button
 					class="btn btn-sm preset-filled-success-500"
@@ -208,7 +215,11 @@
 		</div>
 	{/if}
 
-	<div class="pages-container" class:split-grid={splitMode} style="--thumb-width: {thumbnailWidth}px">
+	<div
+		class="pages-container"
+		class:split-grid={splitMode}
+		style="--thumb-width: {thumbnailWidth}px"
+	>
 		{#each pages as page, i (page.index)}
 			{@const pageMatches = matches.filter(
 				(m) => m.pageIndex === page.index,
@@ -220,14 +231,22 @@
 					: -1}
 			<div class="page-cell" use:trackPageRef={page.index}>
 				{#if splitMode}
-					<div class="text-xs text-surface-500 mb-1 font-medium">Page {page.index + 1}</div>
+					<div class="text-xs text-surface-500 mb-1 font-medium">
+						Page {page.index + 1}
+					</div>
 				{/if}
 				<div
 					class="page-scale-wrapper"
 					class:thumbnail={splitMode}
-					style="--page-aspect-padding: {(page.height / page.width) * 100}%"
+					style="--page-aspect-padding: {(page.height / page.width) *
+						100}%"
 				>
-					<PdfPage {page} matches={pageMatches} {activeCharIndex} {doc} />
+					<PdfPage
+						{page}
+						matches={pageMatches}
+						{activeCharIndex}
+						{doc}
+					/>
 				</div>
 			</div>
 			{#if splitMode && i < pages.length - 1}
@@ -238,7 +257,11 @@
 					title="Split after page {page.index + 1}"
 				>
 					<span class="split-divider-line"></span>
-					<span class="split-label" class:split-label-active={splitPoints.has(page.index)}>&#9986;</span>
+					<span
+						class="split-label"
+						class:split-label-active={splitPoints.has(page.index)}
+						>&#9986;</span
+					>
 				</button>
 			{/if}
 		{/each}
@@ -309,7 +332,9 @@
 		height: 100%;
 		min-height: 40px;
 		border-radius: 2px;
-		transition: background 0.15s, width 0.15s;
+		transition:
+			background 0.15s,
+			width 0.15s;
 		background: var(--color-surface-300);
 	}
 	.split-divider:hover .split-divider-line {
@@ -332,7 +357,9 @@
 		align-items: center;
 		justify-content: center;
 		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-		transition: color 0.15s, box-shadow 0.15s;
+		transition:
+			color 0.15s,
+			box-shadow 0.15s;
 	}
 	.split-divider:hover .split-label {
 		color: var(--color-primary-500);

@@ -111,11 +111,11 @@
 {:else}
 	<div>
 		<AppBar>
-			<AppBar.Toolbar class="px-4 py-2 flex gap-4">
+			<AppBar.Toolbar class="flex gap-4 items-center px-4 py-2">
 				<AppBar.Lead>
 					<h2 class="text-lg font-semibold">PDF Viewer</h2>
 				</AppBar.Lead>
-				<AppBar.Trail>
+				<AppBar.Trail class="flex gap-2">
 					<label class="btn preset-filled cursor-pointer">
 						Open PDF
 						<input

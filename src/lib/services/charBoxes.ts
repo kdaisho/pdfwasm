@@ -9,7 +9,6 @@ export const RENDER_SCALE = 2;
  * PDFium coordinate space: origin bottom-left, Y-up, units = PDF points.
  * The caller converts to canvas space using the anti-drift formula.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function extractCharBoxes(page: PDFiumPage): CharBox[] {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const mod = (page as any).module as any;
