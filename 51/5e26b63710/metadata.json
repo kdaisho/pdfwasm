@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "515e26b63710",
+  "strategy": "manual-commit",
+  "branch": "ui-lib",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/app.css",
+    "src/app.html",
+    "src/lib/components/PdfViewer.svelte",
+    "src/lib/components/SearchBar.svelte",
+    "src/routes/+page.svelte",
+    "vite.config.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/51/5e26b63710/0/metadata.json",
+      "transcript": "/51/5e26b63710/0/full.jsonl",
+      "context": "/51/5e26b63710/0/context.md",
+      "content_hash": "/51/5e26b63710/0/content_hash.txt",
+      "prompt": "/51/5e26b63710/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 22,
+    "cache_creation_tokens": 7870,
+    "cache_read_tokens": 815109,
+    "output_tokens": 425,
+    "api_call_count": 12
+  }
+}
