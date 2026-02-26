@@ -30,7 +30,9 @@
 	let hasMatches = $derived(matchCount > 0);
 </script>
 
-<div class="sticky top-0 z-[100] flex items-center gap-1 px-4 py-2.5 bg-surface-50-950 border-b border-surface-300-700 shadow-sm">
+<div
+	class="sticky top-0 z-100 flex items-center gap-1 px-4 py-2.5 bg-surface-50-950 border-b border-surface-300-700 shadow-sm"
+>
 	<input
 		bind:this={inputElement}
 		type="text"
@@ -42,19 +44,25 @@
 	<button
 		onclick={ontogglecasesensitive}
 		title="Case sensitive (⌘⌥C)"
-		class="btn-icon btn-icon-sm {caseSensitive ? 'preset-filled' : 'preset-tonal-surface'}"
+		class="btn-icon btn-icon-sm {caseSensitive
+			? 'preset-filled'
+			: 'preset-tonal-surface'}"
 	>
 		Aa
 	</button>
 	<button
 		onclick={ontogglewholeword}
 		title="Whole word (⌘⌥W)"
-		class="btn-icon btn-icon-sm {wholeWord ? 'preset-filled' : 'preset-tonal-surface'}"
+		class="btn-icon btn-icon-sm {wholeWord
+			? 'preset-filled'
+			: 'preset-tonal-surface'}"
 	>
 		W
 	</button>
 	{#if query}
-		<span class="text-sm text-surface-500 whitespace-nowrap ml-1 min-w-[80px]">
+		<span
+			class="text-sm text-surface-500 whitespace-nowrap ml-1 min-w-[80px]"
+		>
 			{matchCount === 0
 				? "No matches"
 				: `${currentMatchIndex + 1} of ${matchCount}`}

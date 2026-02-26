@@ -98,8 +98,17 @@
 			ctx!.fillStyle = color;
 
 			// Collect all valid chars in the match
-			const chars: { left: number; right: number; bottom: number; top: number }[] = [];
-			for (let i = match.charIndex; i < match.charIndex + match.charCount; i++) {
+			const chars: {
+				left: number;
+				right: number;
+				bottom: number;
+				top: number;
+			}[] = [];
+			for (
+				let i = match.charIndex;
+				i < match.charIndex + match.charCount;
+				i++
+			) {
 				const c = page.chars[i];
 				if (c) chars.push(c);
 			}
@@ -121,8 +130,10 @@
 
 			// Draw one merged rect per line
 			for (const line of lines) {
-				let minLeft = Infinity, maxRight = -Infinity;
-				let minBottom = Infinity, maxTop = -Infinity;
+				let minLeft = Infinity,
+					maxRight = -Infinity;
+				let minBottom = Infinity,
+					maxTop = -Infinity;
 				for (const c of line) {
 					if (c.left < minLeft) minLeft = c.left;
 					if (c.right > maxRight) maxRight = c.right;
@@ -130,8 +141,12 @@
 					if (c.top > maxTop) maxTop = c.top;
 				}
 				const { x, y, w, h } = pdfToCanvas(
-					minLeft, maxRight, minBottom, maxTop,
-					page.originalHeight, page.scale,
+					minLeft,
+					maxRight,
+					minBottom,
+					maxTop,
+					page.originalHeight,
+					page.scale,
 				);
 				if (w > 0 && h > 0) ctx!.fillRect(x, y, w, h);
 			}

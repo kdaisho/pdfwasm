@@ -1,0 +1,14 @@
+# Dependencies
+node_modules
+
+# Build output
+build
+.svelte-kit
+
+# Tool-generated directories
+.claude
+.entire
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
