@@ -9,6 +9,10 @@ build
 .claude
 .entire
 
+# Server generated paths
+server/dist/
+server/storage/
+
 # Lock files
 pnpm-lock.yaml
 package-lock.json
