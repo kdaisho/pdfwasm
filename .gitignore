@@ -17,6 +17,11 @@ Thumbs.db
 .vscode
 .idea
 
+# Server
+server/storage/
+server/dist/
+server/node_modules/
+
 # Optional: Output of build
 *.log
 .eslintcache

@@ -73,7 +73,7 @@ export default defineConfig(
 	// 8. Project-wide custom rules
 	{
 		rules: {
-			"no-console": ["warn", { allow: ["warn", "error"] }],
+			"no-console": ["warn", { allow: ["warn", "error", "info"] }],
 			eqeqeq: ["error", "always", { null: "ignore" }],
 			"prefer-const": "error",
 			"no-unused-expressions": "error",

@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pdfwasm-db
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: pdfwasm
+      POSTGRES_USER: pdfwasm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
