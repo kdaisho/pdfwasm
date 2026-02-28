@@ -4,8 +4,27 @@ import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import { signToken } from "../lib/jwt.js";
+import { authMiddleware } from "../middleware/auth.js";
+import type { AuthEnv } from "../types.js";
 
-const auth = new Hono();
+const auth = new Hono<AuthEnv>();
+
+auth.use("/me", authMiddleware);
+
+auth.get("/me", async (c) => {
+	const userId = c.get("userId");
+	const [user] = await db
+		.select({ id: users.id, email: users.email })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	if (!user) {
+		return c.json({ error: "User not found" }, 404);
+	}
+
+	return c.json({ user: { id: user.id, email: user.email } });
+});
 
 auth.post("/signup", async (c) => {
 	const body = await c.req.json();

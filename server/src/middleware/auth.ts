@@ -1,11 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { verifyToken } from "../lib/jwt.js";
-
-type AuthEnv = {
-	Variables: {
-		userId: string;
-	};
-};
+import type { AuthEnv } from "../types.js";
 
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
 	const header = c.req.header("Authorization");

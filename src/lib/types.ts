@@ -1,3 +1,13 @@
+export interface AuthUser {
+	id: string;
+	email: string;
+}
+
+export interface AuthResponse {
+	token: string;
+	user: AuthUser;
+}
+
 /** Per-character bounding box in PDF coordinate space (origin bottom-left, Y-up, units: points) */
 export interface CharBox {
 	char: string;

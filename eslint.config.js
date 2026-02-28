@@ -103,4 +103,12 @@ export default defineConfig(
 			"@typescript-eslint/no-unused-expressions": "off",
 		},
 	},
+
+	// 10. Svelte rune stores in .svelte.ts files (plain TS parsed by TypeScript ESLint parser)
+	{
+		files: ["**/*.svelte.ts"],
+		languageOptions: {
+			parser: tseslint.parser,
+		},
+	},
 );

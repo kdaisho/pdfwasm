@@ -6,12 +6,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "../db/index.js";
 import { pdfDocuments } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
-
-type AuthEnv = {
-	Variables: {
-		userId: string;
-	};
-};
+import type { AuthEnv } from "../types.js";
 
 const pdf = new Hono<AuthEnv>();
 

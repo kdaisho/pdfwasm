@@ -1,18 +1,10 @@
 import { apiFetch, setToken, clearToken } from "../services/api.js";
-
-interface AuthUser {
-	id: string;
-	email: string;
-}
-
-interface AuthResponse {
-	token: string;
-	user: AuthUser;
-}
+import type { AuthUser, AuthResponse } from "../types.js";
 
 let user = $state<AuthUser | null>(null);
 let loading = $state(false);
 let error = $state<string | null>(null);
+let initialized = $state(false);
 
 export function getAuth() {
 	return {
@@ -27,6 +19,25 @@ export function getAuth() {
 		},
 		get error() {
 			return error;
+		},
+		get initialized() {
+			return initialized;
+		},
+
+		async initAuth() {
+			const token = localStorage.getItem("auth_token");
+			if (!token) {
+				initialized = true;
+				return;
+			}
+			try {
+				const res = await apiFetch<{ user: AuthUser }>("/auth/me");
+				user = res.user;
+			} catch {
+				clearToken();
+			} finally {
+				initialized = true;
+			}
 		},
 
 		async signup(email: string, password: string) {
