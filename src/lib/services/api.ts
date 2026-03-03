@@ -1,27 +1,10 @@
 const API_BASE = import.meta.env.VITE_API_URL;
 
-function getToken(): string | null {
-	return localStorage.getItem("auth_token");
-}
-
-export function setToken(token: string): void {
-	localStorage.setItem("auth_token", token);
-}
-
-export function clearToken(): void {
-	localStorage.removeItem("auth_token");
-}
-
 export async function apiFetch<T>(
 	path: string,
 	options: RequestInit = {},
 ): Promise<T> {
-	const token = getToken();
 	const headers = new Headers(options.headers);
-
-	if (token) {
-		headers.set("Authorization", `Bearer ${token}`);
-	}
 
 	if (
 		!headers.has("Content-Type") &&
@@ -34,6 +17,7 @@ export async function apiFetch<T>(
 	const res = await fetch(`${API_BASE}${path}`, {
 		...options,
 		headers,
+		credentials: "include",
 	});
 
 	if (!res.ok) {

@@ -1,23 +1,19 @@
 import { createMiddleware } from "hono/factory";
-import { verifyToken } from "../lib/jwt.js";
+import { getCookie } from "hono/cookie";
+import { validateSession } from "../lib/session.js";
 import type { AuthEnv } from "../types.js";
 
 export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
-	const header = c.req.header("Authorization");
-	if (!header?.startsWith("Bearer ")) {
-		return c.json(
-			{ error: "Missing or invalid Authorization header" },
-			401,
-		);
+	const token = getCookie(c, "session_token");
+	if (!token) {
+		return c.json({ error: "Not authenticated" }, 401);
 	}
 
-	const token = header.slice(7);
-	try {
-		const payload = verifyToken(token);
-		c.set("userId", payload.userId);
-	} catch {
-		return c.json({ error: "Invalid or expired token" }, 401);
+	const session = await validateSession(token);
+	if (!session) {
+		return c.json({ error: "Session expired or invalid" }, 401);
 	}
 
+	c.set("userId", session.userId);
 	await next();
 });

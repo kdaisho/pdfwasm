@@ -1,5 +1,5 @@
 {
-	"name": "pdfwasm-server",
+	"name": "server",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
@@ -13,20 +13,21 @@
 		"format:check": "prettier --check ."
 	},
 	"dependencies": {
-		"hono": "^4.7.0",
 		"@hono/node-server": "^1.14.0",
-		"drizzle-orm": "^0.38.0",
-		"postgres": "^3.4.0",
 		"bcrypt": "^5.1.1",
+		"dotenv": "^16.4.0",
+		"drizzle-orm": "^0.38.0",
+		"hono": "^4.7.0",
 		"jsonwebtoken": "^9.0.2",
-		"dotenv": "^16.4.0"
+		"mailersend": "^2.6.0",
+		"postgres": "^3.4.0"
 	},
 	"devDependencies": {
-		"drizzle-kit": "^0.30.0",
-		"tsx": "^4.19.0",
-		"typescript": "~5.6.2",
 		"@types/bcrypt": "^5.0.2",
 		"@types/jsonwebtoken": "^9.0.7",
-		"@types/node": "^22.0.0"
+		"@types/node": "^22.0.0",
+		"drizzle-kit": "^0.30.0",
+		"tsx": "^4.19.0",
+		"typescript": "~5.6.2"
 	}
 }

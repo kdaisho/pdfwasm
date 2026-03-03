@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "concurrently --names frontend,server --prefix-colors cyan,yellow \"pnpm run dev:frontend\" \"pnpm run dev:server\"",
 		"dev:frontend": "vite dev",
-		"dev:server": "pnpm --filter pdfwasm-server dev",
+		"dev:server": "pnpm --filter server dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
