@@ -10,7 +10,7 @@
 
 	const auth = getAuth();
 
-	const publicPaths = ["/login", "/signup"];
+	const publicPaths = ["/login", "/signup", "/reset-password"];
 
 	onMount(() => {
 		auth.initAuth();
@@ -33,12 +33,14 @@
 		Loading…
 	</div>
 {:else if auth.isAuthenticated}
-	<nav class="flex items-center justify-between px-4 py-2 border-b">
+	<nav
+		class="flex items-center justify-between px-4 py-2 border-b border-surface-200"
+	>
 		<span class="text-sm text-surface-500">{auth.user?.email}</span>
 		<button
 			class="btn preset-filled text-sm"
-			onclick={() => {
-				auth.logout();
+			onclick={async () => {
+				await auth.logout();
 				goto(resolve("/login"));
 			}}
 		>

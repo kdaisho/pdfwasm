@@ -9,7 +9,29 @@ import {
 export const users = pgTable("users", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	email: varchar("email", { length: 255 }).notNull().unique(),
-	passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+	passphraseHash: varchar("passphrase_hash", { length: 255 }).notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	userId: uuid("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	expiresAt: timestamp("expires_at").notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const emailVerifications = pgTable("email_verifications", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	email: varchar("email", { length: 255 }).notNull(),
+	otpHash: varchar("otp_hash", { length: 255 }).notNull(),
+	type: varchar("type", { length: 20 }).notNull(), // 'signup' | 'password_reset'
+	attempts: integer("attempts").default(0).notNull(),
+	expiresAt: timestamp("expires_at").notNull(),
+	verifiedAt: timestamp("verified_at"),
+	verifiedToken: uuid("verified_token"),
+	passphraseHash: varchar("passphrase_hash", { length: 255 }),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

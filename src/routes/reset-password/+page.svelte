@@ -9,20 +9,19 @@
 
 	const auth = getAuth();
 
-	// Step state
 	let step = $state(0);
 
-	// Step 1 – email
+	// Step 0 – email
 	let email = $state("");
 	let emailError = $state<string | null>(null);
 	let emailLoading = $state(false);
 
-	// Step 2 – OTP
+	// Step 1 – OTP
 	let otp = $state("");
 	let otpError = $state<string | null>(null);
 	let otpLoading = $state(false);
 
-	// Step 3 – passphrase handover
+	// Step 2 – passphrase handover
 	let passphrase = $state("");
 	let verifiedToken = $state("");
 	let copied = $state(false);
@@ -30,7 +29,7 @@
 	let completeLoading = $state(false);
 	let completeError = $state<string | null>(null);
 
-	const STORAGE_KEY = "signup_state";
+	const STORAGE_KEY = "reset_state";
 
 	function persistState() {
 		try {
@@ -79,7 +78,7 @@
 	});
 
 	beforeNavigate(({ to }) => {
-		if (to && to.url.pathname !== "/signup")
+		if (to && to.url.pathname !== "/reset-password")
 			sessionStorage.removeItem(STORAGE_KEY);
 	});
 
@@ -88,7 +87,7 @@
 		emailError = null;
 		emailLoading = true;
 		try {
-			await apiFetch("/auth/signup/init", {
+			await apiFetch("/auth/reset/init", {
 				method: "POST",
 				body: JSON.stringify({ email }),
 			});
@@ -110,7 +109,7 @@
 			const res = await apiFetch<{
 				verifiedToken: string;
 				passphrase: string;
-			}>("/auth/signup/verify-otp", {
+			}>("/auth/reset/verify-otp", {
 				method: "POST",
 				body: JSON.stringify({ email, otp }),
 			});
@@ -136,7 +135,7 @@
 		completeError = null;
 		completeLoading = true;
 		try {
-			await apiFetch<{ user: AuthUser }>("/auth/signup/complete", {
+			await apiFetch<{ user: AuthUser }>("/auth/reset/complete", {
 				method: "POST",
 				body: JSON.stringify({ verifiedToken }),
 			});
@@ -145,29 +144,26 @@
 			goto(resolve("/"));
 		} catch (err) {
 			completeError =
-				err instanceof Error
-					? err.message
-					: "Failed to complete signup";
+				err instanceof Error ? err.message : "Failed to complete reset";
 		} finally {
 			completeLoading = false;
 		}
 	}
 
-	const stepTitles = ["Your email", "Verify email", "Your passphrase"];
+	const stepTitles = ["Your email", "Verify email", "New passphrase"];
 </script>
 
 <div class="flex items-center justify-center min-h-screen px-4 py-12">
 	<div class="w-full max-w-md space-y-8">
 		<div class="text-center">
-			<h1 class="text-3xl font-bold">Create account</h1>
+			<h1 class="text-3xl font-bold">Reset passphrase</h1>
 			<p class="mt-2 text-sm text-surface-500">
-				Already have an account?
+				Remembered it?
 				<a href={resolve("/login")} class="underline">Log in</a>
 			</p>
 		</div>
 
 		<Steps {step} count={3} linear class="w-full">
-			<!-- Step indicators -->
 			<Steps.List class="mb-8">
 				{#each stepTitles as title, index (title)}
 					<Steps.Item {index} class="flex-1">
@@ -207,7 +203,7 @@
 				<div class="card preset-outlined-surface-200 p-6 rounded-xl">
 					<h2 class="text-xl font-semibold mb-1">Enter your email</h2>
 					<p class="text-sm text-surface-500 mb-6">
-						We'll send a 6-digit code to verify it's you.
+						We'll send a 6-digit code to verify your identity.
 					</p>
 
 					{#if emailError}
@@ -304,23 +300,23 @@
 				</div>
 			</Steps.Content>
 
-			<!-- Step 2: Passphrase handover -->
+			<!-- Step 2: New passphrase handover -->
 			<Steps.Content index={2}>
 				<div
 					class="card preset-outlined-surface-200 p-6 rounded-xl space-y-6"
 				>
 					<div>
 						<h2 class="text-xl font-semibold mb-1">
-							Save your passphrase
+							Your new passphrase
 						</h2>
 						<p class="text-sm text-surface-500">
 							This is the only time you'll see it. Store it
-							somewhere safe — you'll need it to log in.
+							somewhere safe — your old passphrase no longer
+							works.
 						</p>
 					</div>
 
-					<!-- Passphrase display -->
-					<div class="relative">
+					<div>
 						<div
 							class="font-mono text-base sm:text-lg font-semibold tracking-wide bg-surface-100-800 border border-surface-300 rounded-xl px-5 py-4 break-all select-all"
 						>
@@ -342,8 +338,7 @@
 						</div>
 					{/if}
 
-					<!-- Confirmation checkbox -->
-					<label class="flex items-start gap-3 cursor-pointer group">
+					<label class="flex items-start gap-3 cursor-pointer">
 						<input
 							type="checkbox"
 							class="checkbox mt-0.5 shrink-0"
@@ -352,7 +347,7 @@
 						<span class="text-sm leading-snug">
 							I have saved this passphrase in a safe place and
 							understand I cannot recover it without resetting my
-							account.
+							account again.
 						</span>
 					</label>
 

@@ -1,5 +1,5 @@
-import { apiFetch, setToken, clearToken } from "../services/api.js";
-import type { AuthUser, AuthResponse } from "../types.js";
+import { apiFetch } from "../services/api.js";
+import type { AuthUser } from "../types.js";
 
 let user = $state<AuthUser | null>(null);
 let loading = $state(false);
@@ -25,48 +25,24 @@ export function getAuth() {
 		},
 
 		async initAuth() {
-			const token = localStorage.getItem("auth_token");
-			if (!token) {
-				initialized = true;
-				return;
-			}
 			try {
 				const res = await apiFetch<{ user: AuthUser }>("/auth/me");
 				user = res.user;
 			} catch {
-				clearToken();
+				user = null;
 			} finally {
 				initialized = true;
 			}
 		},
 
-		async signup(email: string, password: string) {
+		async login(email: string, passphrase: string) {
 			loading = true;
 			error = null;
 			try {
-				const res = await apiFetch<AuthResponse>("/auth/signup", {
+				const res = await apiFetch<{ user: AuthUser }>("/auth/login", {
 					method: "POST",
-					body: JSON.stringify({ email, password }),
+					body: JSON.stringify({ email, passphrase }),
 				});
-				setToken(res.token);
-				user = res.user;
-			} catch (e) {
-				error = e instanceof Error ? e.message : "Signup failed";
-				throw e;
-			} finally {
-				loading = false;
-			}
-		},
-
-		async login(email: string, password: string) {
-			loading = true;
-			error = null;
-			try {
-				const res = await apiFetch<AuthResponse>("/auth/login", {
-					method: "POST",
-					body: JSON.stringify({ email, password }),
-				});
-				setToken(res.token);
 				user = res.user;
 			} catch (e) {
 				error = e instanceof Error ? e.message : "Login failed";
@@ -76,10 +52,15 @@ export function getAuth() {
 			}
 		},
 
-		logout() {
-			clearToken();
-			user = null;
-			error = null;
+		async logout() {
+			try {
+				await apiFetch("/auth/logout", { method: "POST" });
+			} catch {
+				// ignore
+			} finally {
+				user = null;
+				error = null;
+			}
 		},
 	};
 }

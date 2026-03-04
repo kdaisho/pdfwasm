@@ -8,6 +8,13 @@
 			"when": 1772113361205,
 			"tag": "0000_zippy_black_cat",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1772200000000,
+			"tag": "0001_auth_revamp",
+			"breakpoints": true
 		}
 	]
 }
