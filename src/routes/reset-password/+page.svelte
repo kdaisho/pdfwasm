@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
+	import { beforeNavigate, goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
+	import { onMount } from "svelte";
 	import { Steps } from "@skeletonlabs/skeleton-svelte";
 	import { apiFetch } from "$lib/services/api.js";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
@@ -28,6 +29,59 @@
 	let completeLoading = $state(false);
 	let completeError = $state<string | null>(null);
 
+	const STORAGE_KEY = "reset_state";
+
+	function persistState() {
+		try {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					step,
+					email,
+					verifiedToken,
+					passphrase,
+					savedAt: Date.now(),
+				}),
+			);
+		} catch {
+			// do nothing
+		}
+	}
+
+	onMount(() => {
+		try {
+			const raw = sessionStorage.getItem(STORAGE_KEY);
+			if (!raw) return;
+			const saved = JSON.parse(raw);
+			if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+				sessionStorage.removeItem(STORAGE_KEY);
+				return;
+			}
+			if (saved.step < 1 || saved.step > 2) {
+				sessionStorage.removeItem(STORAGE_KEY);
+				return;
+			}
+			if (
+				saved.step === 2 &&
+				(!saved.verifiedToken || !saved.passphrase)
+			) {
+				sessionStorage.removeItem(STORAGE_KEY);
+				return;
+			}
+			step = saved.step;
+			email = saved.email;
+			verifiedToken = saved.verifiedToken;
+			passphrase = saved.passphrase;
+		} catch {
+			sessionStorage.removeItem(STORAGE_KEY);
+		}
+	});
+
+	beforeNavigate(({ to }) => {
+		if (to && to.url.pathname !== "/reset-password")
+			sessionStorage.removeItem(STORAGE_KEY);
+	});
+
 	async function submitEmail(e: SubmitEvent) {
 		e.preventDefault();
 		emailError = null;
@@ -38,6 +92,7 @@
 				body: JSON.stringify({ email }),
 			});
 			step = 1;
+			persistState();
 		} catch (err) {
 			emailError =
 				err instanceof Error ? err.message : "Something went wrong";
@@ -61,6 +116,7 @@
 			verifiedToken = res.verifiedToken;
 			passphrase = res.passphrase;
 			step = 2;
+			persistState();
 		} catch (err) {
 			otpError =
 				err instanceof Error ? err.message : "Verification failed";
@@ -84,6 +140,7 @@
 				body: JSON.stringify({ verifiedToken }),
 			});
 			await auth.initAuth();
+			sessionStorage.removeItem(STORAGE_KEY);
 			goto(resolve("/"));
 		} catch (err) {
 			completeError =
@@ -234,6 +291,7 @@
 								step = 0;
 								otp = "";
 								otpError = null;
+								sessionStorage.removeItem(STORAGE_KEY);
 							}}
 						>
 							Go back and resend
