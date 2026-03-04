@@ -4,8 +4,10 @@
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
 	import { splitPdf, downloadSplitPdfs } from "$lib/services/splitPdf";
+	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
+	import AuthModal from "./AuthModal.svelte";
 
 	interface Props {
 		pages: PageData[];
@@ -15,6 +17,10 @@
 	}
 
 	let { pages, doc, splitMode, pdfBytes }: Props = $props();
+
+	const auth = getAuth();
+	let showAuthModal = $state(false);
+	let pendingExport = $state(false);
 
 	let query = $state("");
 	let debouncedQuery = $state("");
@@ -95,7 +101,7 @@
 		splitPoints = next;
 	}
 
-	async function handleExport() {
+	async function doExport() {
 		if (splitPoints.size === 0 || exporting) return;
 		exporting = true;
 		try {
@@ -103,6 +109,24 @@
 			downloadSplitPdfs(segments);
 		} finally {
 			exporting = false;
+		}
+	}
+
+	function handleExport() {
+		if (splitPoints.size === 0 || exporting) return;
+		if (auth.isAuthenticated) {
+			doExport();
+		} else {
+			pendingExport = true;
+			showAuthModal = true;
+		}
+	}
+
+	function handleAuthSuccess() {
+		showAuthModal = false;
+		if (pendingExport) {
+			pendingExport = false;
+			doExport();
 		}
 	}
 
@@ -267,6 +291,15 @@
 		{/each}
 	</div>
 </div>
+
+<AuthModal
+	open={showAuthModal}
+	onOpenChange={(details) => {
+		showAuthModal = details.open;
+		if (!details.open) pendingExport = false;
+	}}
+	onAuthSuccess={handleAuthSuccess}
+/>
 
 <style>
 	/* Layout-specific styles that can't be expressed as pure Tailwind utilities */
