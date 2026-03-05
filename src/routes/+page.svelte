@@ -4,8 +4,13 @@
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
+	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { uploadPdf, downloadPdf } from "$lib/services/pdf-api";
 	import type { PageData } from "$lib/types";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
+	import SavedPdfsPopover from "$lib/components/SavedPdfsPopover.svelte";
+
+	const auth = getAuth();
 
 	let library: PDFiumLibrary | null = $state(null);
 	let libLoading = $state(true);
@@ -18,11 +23,18 @@
 	let charExtractionId = 0;
 	let pdfBytes: Uint8Array | null = $state(null);
 	let splitMode = $state(false);
+	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
+	let uploadError: string | null = $state(null);
 
 	onMount(() => {
 		getPdfiumLibrary()
 			.then((lib) => {
 				library = lib;
+				const saved = localStorage.getItem("lastPdfId");
+				if (saved && auth.isAuthenticated) {
+					const { docId, filename } = JSON.parse(saved);
+					loadFromServer(docId, filename);
+				}
 			})
 			.catch((err: unknown) => {
 				libError = err instanceof Error ? err : new Error(String(err));
@@ -32,7 +44,7 @@
 			});
 	});
 
-	async function loadFile(file: File) {
+	async function loadPdfBytes(uint8: Uint8Array) {
 		if (!library) return;
 
 		docLoading = true;
@@ -43,17 +55,13 @@
 		currentDoc?.destroy();
 		currentDoc = null;
 
-		// Cancel any in-progress background char extraction
 		const extractionId = ++charExtractionId;
 
 		try {
-			const buffer = await file.arrayBuffer();
-			const uint8 = new Uint8Array(buffer);
 			pdfBytes = uint8;
 			const doc = await library.loadDocument(uint8);
 			currentDoc = doc;
 
-			// Phase 1: Build page metadata instantly (no render, no char extraction)
 			const pageCount = doc.getPageCount();
 			const pageDataList: PageData[] = [];
 
@@ -74,18 +82,67 @@
 			pages = pageDataList;
 			docLoading = false;
 
-			// Phase 2: Background char extraction for search
 			for (let i = 0; i < pageCount; i++) {
 				if (extractionId !== charExtractionId) return;
 				const page = doc.getPage(i);
 				const chars = extractCharBoxes(page);
 				pages[i].chars = chars;
-				// Yield to main thread between pages
 				await new Promise((r) => setTimeout(r, 0));
 			}
 		} catch (err: unknown) {
 			docError = err instanceof Error ? err : new Error(String(err));
 			docLoading = false;
+		}
+	}
+
+	async function loadFile(file: File) {
+		if (!library) return;
+
+		uploadStatus = "idle";
+		uploadError = null;
+
+		const buffer = await file.arrayBuffer();
+		const uint8 = new Uint8Array(buffer);
+
+		await loadPdfBytes(uint8);
+
+		if (auth.isAuthenticated) {
+			uploadStatus = "uploading";
+			uploadPdf(file)
+				.then((meta) => {
+					uploadStatus = "saved";
+					localStorage.setItem(
+						"lastPdfId",
+						JSON.stringify({
+							docId: meta.id,
+							filename: meta.filename,
+						}),
+					);
+				})
+				.catch((err: unknown) => {
+					uploadStatus = "error";
+					uploadError =
+						err instanceof Error ? err.message : "Upload failed";
+				});
+		}
+	}
+
+	async function loadFromServer(id: string, _filename: string) {
+		if (!library) return;
+
+		uploadStatus = "idle";
+		uploadError = null;
+
+		try {
+			const uint8 = await downloadPdf(id);
+			await loadPdfBytes(uint8);
+			uploadStatus = "saved";
+			localStorage.setItem(
+				"lastPdfId",
+				JSON.stringify({ docId: id, filename: _filename }),
+			);
+		} catch (err: unknown) {
+			docError = err instanceof Error ? err : new Error(String(err));
 		}
 	}
 
@@ -115,7 +172,7 @@
 				<AppBar.Lead>
 					<h2 class="text-lg font-semibold">PDF Viewer</h2>
 				</AppBar.Lead>
-				<AppBar.Trail class="flex gap-2">
+				<AppBar.Trail class="flex gap-2 items-center">
 					<label class="btn preset-filled cursor-pointer">
 						Open PDF
 						<input
@@ -136,6 +193,23 @@
 						>
 							{splitMode ? "Exit Split Mode" : "Split Mode"}
 						</button>
+					{/if}
+					{#if auth.isAuthenticated}
+						<SavedPdfsPopover
+							onSelect={(id, filename) =>
+								loadFromServer(id, filename)}
+						/>
+					{/if}
+					{#if uploadStatus === "uploading"}
+						<span class="text-sm text-surface-500">Saving…</span>
+					{:else if uploadStatus === "saved"}
+						<span class="text-sm text-success-500">Saved</span>
+					{:else if uploadStatus === "error"}
+						<span class="text-sm text-error-500"
+							>Save failed{uploadError
+								? `: ${uploadError}`
+								: ""}</span
+						>
 					{/if}
 					{#if docLoading}
 						<span class="text-sm text-surface-500"

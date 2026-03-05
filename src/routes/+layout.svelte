@@ -30,7 +30,7 @@
 				class="btn preset-filled text-sm"
 				onclick={async () => {
 					await auth.logout();
-					goto(resolve("/login"));
+					goto(resolve("/"));
 				}}
 			>
 				Log Out
