@@ -143,7 +143,12 @@
 			);
 		} catch (err: unknown) {
 			docError = err instanceof Error ? err : new Error(String(err));
+			localStorage.removeItem("lastPdfId");
 		}
+	}
+
+	function dismissDocError() {
+		docError = null;
 	}
 
 	function handleFileChange(e: Event) {
@@ -220,6 +225,12 @@
 						<span class="text-sm text-error-500"
 							>Error: {docError.message}</span
 						>
+						<button
+							class="btn btn-sm preset-filled-error-500"
+							onclick={dismissDocError}
+						>
+							Dismiss
+						</button>
 					{/if}
 				</AppBar.Trail>
 			</AppBar.Toolbar>
