@@ -60,6 +60,7 @@ export function getAuth() {
 			} finally {
 				user = null;
 				error = null;
+				localStorage.removeItem("lastPdfId");
 			}
 		},
 	};
