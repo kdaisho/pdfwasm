@@ -66,6 +66,12 @@
 		const pageEl = pageElements.get(match.pageIndex);
 		if (!pageEl) return;
 
+		// In split mode, thumbnails are small — just scroll the page cell into view
+		if (splitMode) {
+			pageEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			return;
+		}
+
 		const page = pages.find((p) => p.index === match.pageIndex);
 		if (!page) return;
 		const char = page.chars[match.charIndex];
