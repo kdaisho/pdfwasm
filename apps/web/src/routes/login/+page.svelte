@@ -5,12 +5,6 @@
 
 	const auth = getAuth();
 
-	$effect(() => {
-		if (auth.initialized && auth.isAuthenticated) {
-			goto(resolve("/"));
-		}
-	});
-
 	let email = $state("");
 	let passphrase = $state("");
 
@@ -25,65 +19,63 @@
 	}
 </script>
 
-{#if auth.initialized && !auth.isAuthenticated}
-	<div class="flex items-center justify-center min-h-screen px-4">
-		<div class="w-full max-w-sm space-y-6 p-8">
-			<h1 class="text-2xl font-bold text-center">Log In</h1>
+<div class="flex items-center justify-center min-h-screen px-4">
+	<div class="w-full max-w-sm space-y-6 p-8">
+		<h1 class="text-2xl font-bold text-center">Log In</h1>
 
-			{#if auth.error}
-				<div
-					class="text-error-500 text-sm text-center p-3 bg-error-50 rounded-lg"
-				>
-					{auth.error}
-				</div>
-			{/if}
-
-			<form onsubmit={handleSubmit} class="space-y-4">
-				<label class="block space-y-1">
-					<span class="text-sm font-medium">Email</span>
-					<input
-						type="email"
-						class="input"
-						bind:value={email}
-						required
-						autocomplete="email"
-						placeholder="you@example.com"
-					/>
-				</label>
-
-				<label class="block space-y-1">
-					<span class="text-sm font-medium">Passphrase</span>
-					<input
-						type="password"
-						class="input font-mono"
-						bind:value={passphrase}
-						required
-						autocomplete="current-password"
-						placeholder="word-word-word-word-0000"
-					/>
-				</label>
-
-				<button
-					type="submit"
-					class="btn preset-filled-primary-500 w-full"
-					disabled={auth.loading}
-				>
-					{auth.loading ? "Logging in…" : "Log In"}
-				</button>
-			</form>
-
-			<div class="space-y-2 text-sm text-center">
-				<p>
-					Don't have an account?
-					<a href={resolve("/signup")} class="underline">Sign up</a>
-				</p>
-				<p>
-					Forgot your passphrase?
-					<a href={resolve("/reset-password")} class="underline"
-						>Reset it</a
-					>
-				</p>
+		{#if auth.error}
+			<div
+				class="text-error-500 text-sm text-center p-3 bg-error-50 rounded-lg"
+			>
+				{auth.error}
 			</div>
+		{/if}
+
+		<form onsubmit={handleSubmit} class="space-y-4">
+			<label class="block space-y-1">
+				<span class="text-sm font-medium">Email</span>
+				<input
+					type="email"
+					class="input"
+					bind:value={email}
+					required
+					autocomplete="email"
+					placeholder="you@example.com"
+				/>
+			</label>
+
+			<label class="block space-y-1">
+				<span class="text-sm font-medium">Passphrase</span>
+				<input
+					type="password"
+					class="input font-mono"
+					bind:value={passphrase}
+					required
+					autocomplete="current-password"
+					placeholder="word-word-word-word-0000"
+				/>
+			</label>
+
+			<button
+				type="submit"
+				class="btn preset-filled-primary-500 w-full"
+				disabled={auth.loading}
+			>
+				{auth.loading ? "Logging in…" : "Log In"}
+			</button>
+		</form>
+
+		<div class="space-y-2 text-sm text-center">
+			<p>
+				Don't have an account?
+				<a href={resolve("/signup")} class="underline">Sign up</a>
+			</p>
+			<p>
+				Forgot your passphrase?
+				<a href={resolve("/reset-password")} class="underline"
+					>Reset it</a
+				>
+			</p>
 		</div>
 	</div>
-{/if}
+</div>

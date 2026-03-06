@@ -24,6 +24,11 @@ export function getAuth() {
 			return initialized;
 		},
 
+		initialize(initialUser: AuthUser | null) {
+			user = initialUser;
+			initialized = true;
+		},
+
 		async initAuth() {
 			try {
 				const res = await apiFetch<{ user: AuthUser }>("/auth/me");
