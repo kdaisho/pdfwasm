@@ -67,13 +67,14 @@
 
 			for (let i = 0; i < pageCount; i++) {
 				const page = doc.getPage(i);
-				const size = page.getSize(true);
+				const { originalWidth, originalHeight } =
+					page.getOriginalSize();
 				pageDataList.push({
 					index: i,
-					originalWidth: size.width,
-					originalHeight: size.height,
-					width: Math.round(size.width * RENDER_SCALE),
-					height: Math.round(size.height * RENDER_SCALE),
+					originalWidth,
+					originalHeight,
+					width: Math.round(originalWidth * RENDER_SCALE),
+					height: Math.round(originalHeight * RENDER_SCALE),
 					chars: [],
 					scale: RENDER_SCALE,
 				});
