@@ -1,2 +1,2 @@
 pnpm exec lint-staged
-pnpm --filter @pdfwasm/web check
+pnpm --filter @web check

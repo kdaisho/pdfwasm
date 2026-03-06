@@ -5,7 +5,7 @@
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
-	import { uploadPdf, downloadPdf } from "$lib/services/pdf-api";
+	import { uploadPdf, downloadPdf, setLastPdf } from "$lib/services/pdf-api";
 	import type { PageData } from "$lib/types";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
 	import SavedPdfsPopover from "$lib/components/SavedPdfsPopover.svelte";
@@ -30,10 +30,8 @@
 		getPdfiumLibrary()
 			.then((lib) => {
 				library = lib;
-				const saved = localStorage.getItem("lastPdfId");
-				if (saved && auth.isAuthenticated) {
-					const { docId, filename } = JSON.parse(saved);
-					loadFromServer(docId, filename);
+				if (auth.user?.lastPdfId) {
+					loadFromServer(auth.user.lastPdfId);
 				}
 			})
 			.catch((err: unknown) => {
@@ -112,13 +110,7 @@
 			uploadPdf(file)
 				.then((meta) => {
 					uploadStatus = "saved";
-					localStorage.setItem(
-						"lastPdfId",
-						JSON.stringify({
-							docId: meta.id,
-							filename: meta.filename,
-						}),
-					);
+					setLastPdf(meta.id).catch(() => {});
 				})
 				.catch((err: unknown) => {
 					uploadStatus = "error";
@@ -128,7 +120,7 @@
 		}
 	}
 
-	async function loadFromServer(id: string, _filename: string) {
+	async function loadFromServer(id: string, _filename?: string) {
 		if (!library) return;
 
 		uploadStatus = "idle";
@@ -138,13 +130,9 @@
 			const uint8 = await downloadPdf(id);
 			await loadPdfBytes(uint8);
 			uploadStatus = "saved";
-			localStorage.setItem(
-				"lastPdfId",
-				JSON.stringify({ docId: id, filename: _filename }),
-			);
+			setLastPdf(id).catch(() => {});
 		} catch (err: unknown) {
 			docError = err instanceof Error ? err : new Error(String(err));
-			localStorage.removeItem("lastPdfId");
 		}
 	}
 

@@ -9,7 +9,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const res = await fetch(`${apiUrl}/auth/me`, {
 				headers: { Cookie: `session_token=${sessionToken}` },
 			});
-			event.locals.user = res.ok ? await res.json() : null;
+			if (res.ok) {
+				const body = await res.json();
+				event.locals.user = body.user;
+			} else {
+				event.locals.user = null;
+			}
 		} catch {
 			event.locals.user = null;
 		}

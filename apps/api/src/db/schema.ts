@@ -46,3 +46,12 @@ export const pdfDocuments = pgTable("pdf_documents", {
 	pageCount: integer("page_count"),
 	uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
+
+export const userPreferences = pgTable("user_preferences", {
+	userId: uuid("user_id")
+		.primaryKey()
+		.references(() => users.id, { onDelete: "cascade" }),
+	lastPdfId: uuid("last_pdf_id").references(() => pdfDocuments.id, {
+		onDelete: "set null",
+	}),
+});
