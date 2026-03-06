@@ -1,8 +1,16 @@
-# SvelteKit/Node build and cache
-.svelte-kit
-build
+# Build and cache
 node_modules
 .vite
+*.log
+.eslintcache
+
+# SvelteKit
+apps/web/.svelte-kit
+apps/web/build
+
+# Server
+apps/api/dist/
+apps/api/storage/
 
 # Environment variables
 .env
@@ -17,12 +25,5 @@ Thumbs.db
 .vscode
 .idea
 
-# Server
-server/storage/
-server/dist/
-server/node_modules/
-
-# Optional: Output of build
-*.log
-.eslintcache
+# Misc
 .netlify
