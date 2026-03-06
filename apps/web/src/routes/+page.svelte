@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { onMount } from "svelte";
 	import { AppBar } from "@skeletonlabs/skeleton-svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
-	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { uploadPdf, downloadPdf, setLastPdf } from "$lib/services/pdf-api";
-	import type { PageData } from "$lib/types";
+	import type { PageData as PdfPageData } from "$lib/types";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
 	import SavedPdfsPopover from "$lib/components/SavedPdfsPopover.svelte";
+
+	let { data } = $props();
 
 	const auth = getAuth();
 
@@ -16,7 +16,7 @@
 	let libLoading = $state(true);
 	let libError: Error | null = $state(null);
 
-	let pages: PageData[] = $state([]);
+	let pages: PdfPageData[] = $state([]);
 	let docLoading = $state(false);
 	let docError: Error | null = $state(null);
 	let currentDoc: PDFiumDocument | null = $state(null);
@@ -26,21 +26,27 @@
 	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
 	let uploadError: string | null = $state(null);
 
-	onMount(() => {
-		getPdfiumLibrary()
-			.then((lib) => {
-				library = lib;
-				if (auth.user?.lastPdfId) {
-					loadFromServer(auth.user.lastPdfId);
-				}
-			})
-			.catch((err: unknown) => {
-				libError = err instanceof Error ? err : new Error(String(err));
-			})
-			.finally(() => {
-				libLoading = false;
-			});
-	});
+	// Both started in parallel by +page.ts load — just await them here
+	async function init() {
+		try {
+			const [lib, lastPdfBytes] = await Promise.all([
+				data.libraryPromise,
+				data.lastPdfPromise,
+			]);
+			library = lib;
+
+			if (lastPdfBytes) {
+				uploadStatus = "saved";
+				await loadPdfBytes(lastPdfBytes);
+			}
+		} catch (err: unknown) {
+			libError = err instanceof Error ? err : new Error(String(err));
+		} finally {
+			libLoading = false;
+		}
+	}
+
+	init();
 
 	async function loadPdfBytes(uint8: Uint8Array) {
 		if (!library) return;
@@ -61,7 +67,7 @@
 			currentDoc = doc;
 
 			const pageCount = doc.getPageCount();
-			const pageDataList: PageData[] = [];
+			const pageDataList: PdfPageData[] = [];
 
 			for (let i = 0; i < pageCount; i++) {
 				const page = doc.getPage(i);
