@@ -4,7 +4,7 @@ import { mkdir, unlink, writeFile, stat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { db } from "../db/index.js";
-import { pdfDocuments } from "../db/schema.js";
+import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { AuthEnv } from "../types.js";
 
@@ -101,6 +101,39 @@ pdf.get("/download/:id", async (c) => {
 		"Content-Disposition": `attachment; filename="${doc.filename}"`,
 		"Content-Length": fileStats.size.toString(),
 	});
+});
+
+pdf.put("/last", async (c) => {
+	const userId = c.get("userId");
+	const { pdfId } = await c.req.json();
+
+	if (pdfId) {
+		// Verify the PDF belongs to this user
+		const [doc] = await db
+			.select({ id: pdfDocuments.id })
+			.from(pdfDocuments)
+			.where(
+				and(
+					eq(pdfDocuments.id, pdfId),
+					eq(pdfDocuments.userId, userId),
+				),
+			)
+			.limit(1);
+
+		if (!doc) {
+			return c.json({ error: "Document not found" }, 404);
+		}
+	}
+
+	await db
+		.insert(userPreferences)
+		.values({ userId, lastPdfId: pdfId || null })
+		.onConflictDoUpdate({
+			target: userPreferences.userId,
+			set: { lastPdfId: pdfId || null },
+		});
+
+	return c.json({ ok: true });
 });
 
 pdf.delete("/:id", async (c) => {

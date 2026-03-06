@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { eq, and, desc } from "drizzle-orm";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { db } from "../db/index.js";
-import { users, emailVerifications } from "../db/schema.js";
+import { users, emailVerifications, userPreferences } from "../db/schema.js";
 import { generateOtp, hashOtp, verifyOtp } from "../lib/otp.js";
 import { generatePassphrase } from "../lib/passphrase.js";
 import { hashPassphrase, verifyPassphrase } from "../lib/passphrase-hash.js";
@@ -38,17 +38,24 @@ auth.use("/me", authMiddleware);
 
 auth.get("/me", async (c) => {
 	const userId = c.get("userId");
-	const [user] = await db
-		.select({ id: users.id, email: users.email })
+	const [row] = await db
+		.select({
+			id: users.id,
+			email: users.email,
+			lastPdfId: userPreferences.lastPdfId,
+		})
 		.from(users)
+		.leftJoin(userPreferences, eq(users.id, userPreferences.userId))
 		.where(eq(users.id, userId))
 		.limit(1);
 
-	if (!user) {
+	if (!row) {
 		return c.json({ error: "User not found" }, 404);
 	}
 
-	return c.json({ user: { id: user.id, email: user.email } });
+	return c.json({
+		user: { id: row.id, email: row.email, lastPdfId: row.lastPdfId },
+	});
 });
 
 // ── Signup ───────────────────────────────────────────────────────────────────
@@ -192,7 +199,10 @@ auth.post("/signup/complete", async (c) => {
 	const sessionToken = await createSession(user.id);
 	setSessionCookie(c, sessionToken);
 
-	return c.json({ user: { id: user.id, email: user.email } }, 201);
+	return c.json(
+		{ user: { id: user.id, email: user.email, lastPdfId: null } },
+		201,
+	);
 });
 
 // ── Login ─────────────────────────────────────────────────────────────────
@@ -218,10 +228,22 @@ auth.post("/login", async (c) => {
 		return c.json({ error: "Invalid email or passphrase" }, 401);
 	}
 
+	const [prefs] = await db
+		.select({ lastPdfId: userPreferences.lastPdfId })
+		.from(userPreferences)
+		.where(eq(userPreferences.userId, user.id))
+		.limit(1);
+
 	const sessionToken = await createSession(user.id);
 	setSessionCookie(c, sessionToken);
 
-	return c.json({ user: { id: user.id, email: user.email } });
+	return c.json({
+		user: {
+			id: user.id,
+			email: user.email,
+			lastPdfId: prefs?.lastPdfId ?? null,
+		},
+	});
 });
 
 // ── Logout ────────────────────────────────────────────────────────────────
@@ -385,11 +407,23 @@ auth.post("/reset/complete", async (c) => {
 		.delete(emailVerifications)
 		.where(eq(emailVerifications.id, record.id));
 
+	const [prefs] = await db
+		.select({ lastPdfId: userPreferences.lastPdfId })
+		.from(userPreferences)
+		.where(eq(userPreferences.userId, user.id))
+		.limit(1);
+
 	// Create new session
 	const sessionToken = await createSession(user.id);
 	setSessionCookie(c, sessionToken);
 
-	return c.json({ user: { id: user.id, email: record.email } });
+	return c.json({
+		user: {
+			id: user.id,
+			email: record.email,
+			lastPdfId: prefs?.lastPdfId ?? null,
+		},
+	});
 });
 
 export default auth;

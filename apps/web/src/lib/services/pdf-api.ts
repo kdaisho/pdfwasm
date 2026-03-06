@@ -54,6 +54,20 @@ export async function downloadPdf(id: string): Promise<Uint8Array> {
 	return new Uint8Array(buffer);
 }
 
+export async function setLastPdf(pdfId: string): Promise<void> {
+	const res = await fetch(`${API_BASE}/pdfs/last`, {
+		method: "PUT",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ pdfId }),
+		credentials: "include",
+	});
+
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw new Error(body.error || `Set last PDF failed: ${res.status}`);
+	}
+}
+
 export async function deletePdf(id: string): Promise<void> {
 	const res = await fetch(`${API_BASE}/pdfs/${id}`, {
 		method: "DELETE",

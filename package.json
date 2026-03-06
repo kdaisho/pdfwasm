@@ -4,24 +4,24 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "concurrently --names web,api --prefix-colors cyan,yellow \"pnpm --filter @pdfwasm/web dev\" \"pnpm --filter @pdfwasm/api dev\"",
-		"dev:web": "pnpm --filter @pdfwasm/web dev",
-		"dev:api": "pnpm --filter @pdfwasm/api dev",
-		"build": "pnpm --filter @pdfwasm/web build",
-		"build:api": "pnpm --filter @pdfwasm/api build",
-		"preview": "pnpm --filter @pdfwasm/web preview",
-		"check": "pnpm --filter @pdfwasm/web check",
-		"lint": "pnpm --filter @pdfwasm/web lint",
-		"lint:fix": "pnpm --filter @pdfwasm/web lint:fix",
+		"dev": "concurrently --names web,api --prefix-colors cyan,yellow \"pnpm --filter @web dev\" \"pnpm --filter @api dev\"",
+		"dev:web": "pnpm --filter @web dev",
+		"dev:api": "pnpm --filter @api dev",
+		"build": "pnpm --filter @web build",
+		"build:api": "pnpm --filter @api build",
+		"preview": "pnpm --filter @web preview",
+		"check": "pnpm --filter @web check",
+		"lint": "pnpm --filter @web lint",
+		"lint:fix": "pnpm --filter @web lint:fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"prepare": "husky",
-		"db:generate": "pnpm --filter @pdfwasm/api db:generate",
-		"db:migrate": "pnpm --filter @pdfwasm/api db:migrate"
+		"db:generate": "pnpm --filter @api db:generate",
+		"db:migrate": "pnpm --filter @api db:migrate"
 	},
 	"lint-staged": {
 		"apps/web/**/*.{js,ts,svelte}": [
-			"pnpm --filter @pdfwasm/web exec eslint --fix",
+			"pnpm --filter @web exec eslint --fix",
 			"prettier --write"
 		],
 		"apps/api/**/*.{js,ts}": [
