@@ -8,6 +8,7 @@
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import AuthModal from "./AuthModal.svelte";
+	import { SvelteMap } from "svelte/reactivity";
 
 	interface Props {
 		pages: PageData[];
@@ -31,6 +32,15 @@
 	let exporting = $state(false);
 	let thumbnailWidth = $state(250);
 
+	const groupColors = [
+		"#4f6ef7", // blue
+		"#e5484d", // red
+		"#30a46c", // green
+		"#e38c2d", // amber
+		"#8e4ec6", // purple
+		"#0ea5e9", // sky
+	];
+
 	let searchInput: HTMLInputElement | undefined = $state();
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, tracks DOM refs imperatively via bind:this
 	let pageElements = new Map<number, HTMLDivElement>();
@@ -50,6 +60,21 @@
 	let matches: SearchMatch[] = $derived(
 		findMatches(pages, debouncedQuery, { caseSensitive, wholeWord }),
 	);
+
+	/** Map each page index → its group number (0-based) */
+	let pageGroupMap = $derived(
+		(() => {
+			const map = new SvelteMap<number, number>();
+			let groupIdx = 0;
+			for (const page of pages) {
+				map.set(page.index, groupIdx);
+				if (splitPoints.has(page.index)) groupIdx++;
+			}
+			return map;
+		})(),
+	);
+
+	let groupCount = $derived(splitPoints.size > 0 ? splitPoints.size + 1 : 1);
 
 	// Reset to first match only when search parameters change (not when background extraction adds chars)
 	$effect(() => {
@@ -259,11 +284,26 @@
 				matches[currentMatchIndex]?.pageIndex === page.index
 					? matches[currentMatchIndex].charIndex
 					: -1}
+			{@const gIdx = pageGroupMap.get(page.index) ?? 0}
 			<div
-				class="flex flex-col items-center"
-				style={splitMode ? `width: ${thumbnailWidth}px` : ""}
+				class="flex flex-col items-center rounded-lg p-2 -m-1"
+				style="{splitMode
+					? `width: ${thumbnailWidth}px`
+					: ''}{splitMode && groupCount > 1
+					? `; background: ${groupColors[gIdx % groupColors.length]}15`
+					: ''}"
 				use:trackPageRef={page.index}
 			>
+				{#if splitMode && groupCount > 1}
+					<div
+						class="text-xs font-medium mb-1 rounded-full px-2 py-0.5"
+						style="background: {groupColors[
+							gIdx % groupColors.length
+						]}20; color: {groupColors[gIdx % groupColors.length]}"
+					>
+						File {gIdx + 1}
+					</div>
+				{/if}
 				<div
 					class="w-full {splitMode ? 'flex justify-center' : ''}"
 					class:thumbnail={splitMode}
