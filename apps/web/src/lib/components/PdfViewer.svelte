@@ -23,6 +23,7 @@
 	let showAuthModal = $state(false);
 	let pendingExport = $state(false);
 
+	let searchOpen = $state(false);
 	let query = $state("");
 	let debouncedQuery = $state("");
 	let caseSensitive = $state(false);
@@ -173,11 +174,19 @@
 		currentMatchIndex = (currentMatchIndex - 1 + n) % n;
 	}
 
+	function closeSearch() {
+		searchOpen = false;
+	}
+
 	function handleKeyDown(e: KeyboardEvent) {
 		if (e.metaKey && !e.altKey && !e.shiftKey && e.code === "KeyF") {
 			e.preventDefault();
-			searchInput?.focus();
-			searchInput?.select();
+			searchOpen = true;
+			// Focus after the bar renders
+			requestAnimationFrame(() => {
+				searchInput?.focus();
+				searchInput?.select();
+			});
 			return;
 		}
 
@@ -216,25 +225,28 @@
 <svelte:window onkeydown={handleKeyDown} />
 
 <div>
-	<SearchBar
-		bind:inputElement={searchInput}
-		{query}
-		onchange={(q) => {
-			query = q;
-		}}
-		matchCount={matches.length}
-		{currentMatchIndex}
-		onnext={goToNext}
-		onprev={goToPrev}
-		{caseSensitive}
-		{wholeWord}
-		ontogglecasesensitive={() => {
-			caseSensitive = !caseSensitive;
-		}}
-		ontogglewholeword={() => {
-			wholeWord = !wholeWord;
-		}}
-	/>
+	{#if searchOpen}
+		<SearchBar
+			bind:inputElement={searchInput}
+			{query}
+			onchange={(q) => {
+				query = q;
+			}}
+			matchCount={matches.length}
+			{currentMatchIndex}
+			onnext={goToNext}
+			onprev={goToPrev}
+			{caseSensitive}
+			{wholeWord}
+			ontogglecasesensitive={() => {
+				caseSensitive = !caseSensitive;
+			}}
+			ontogglewholeword={() => {
+				wholeWord = !wholeWord;
+			}}
+			onclose={closeSearch}
+		/>
+	{/if}
 
 	{#if splitMode}
 		<div
