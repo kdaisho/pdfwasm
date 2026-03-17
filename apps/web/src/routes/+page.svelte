@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { AppBar } from "@skeletonlabs/skeleton-svelte";
+	import { onDestroy } from "svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
 	import { uploadPdf, downloadPdf, setLastPdf } from "$lib/services/pdf-api";
 	import type { PageData as PdfPageData } from "$lib/types";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
-	import SavedPdfsPopover from "$lib/components/SavedPdfsPopover.svelte";
+	import PdfSidebarItems from "$lib/components/PdfSidebarItems.svelte";
 
 	let { data } = $props();
 
@@ -151,94 +152,47 @@
 		const file = input.files?.[0];
 		if (file) void loadFile(file);
 	}
+
+	// Register sidebar items
+	$effect(() => {
+		sidebarStore.set(PdfSidebarItems, {
+			onFileChange: handleFileChange,
+			splitMode,
+			onToggleSplit: () => {
+				splitMode = !splitMode;
+			},
+			showSplit: pages.length > 0,
+			onSelectPdf: (id: string, filename: string) =>
+				loadFromServer(id, filename),
+			uploadStatus,
+			uploadError,
+			docLoading,
+			docError,
+			onDismissError: dismissDocError,
+		});
+	});
+
+	onDestroy(() => {
+		sidebarStore.clear();
+	});
 </script>
 
 {#if libLoading}
 	<div
-		class="flex items-center justify-center h-[80vh] text-lg text-surface-500"
+		class="flex items-center justify-center h-full text-lg text-surface-500"
 	>
 		Loading PDFium Wasm…
 	</div>
 {:else if libError}
-	<div
-		class="flex items-center justify-center h-[80vh] text-lg text-error-500"
-	>
+	<div class="flex items-center justify-center h-full text-lg text-error-500">
 		Failed to load PDFium: {libError.message}
 	</div>
-{:else}
-	<div>
-		<AppBar>
-			<AppBar.Toolbar class="flex gap-4 items-center px-4 py-2">
-				<AppBar.Lead>
-					<h2 class="text-lg font-semibold">PDF Viewer</h2>
-				</AppBar.Lead>
-				<AppBar.Trail class="flex gap-2 items-center">
-					<label class="btn preset-filled cursor-pointer">
-						Open PDF
-						<input
-							type="file"
-							accept=".pdf"
-							onchange={handleFileChange}
-							class="hidden"
-						/>
-					</label>
-					{#if pages.length > 0}
-						<button
-							class="btn {splitMode
-								? 'preset-filled-error-500'
-								: 'preset-filled'}"
-							onclick={() => {
-								splitMode = !splitMode;
-							}}
-						>
-							{splitMode ? "Exit Split Mode" : "Split Mode"}
-						</button>
-					{/if}
-					{#if auth.isAuthenticated}
-						<SavedPdfsPopover
-							onSelect={(id, filename) =>
-								loadFromServer(id, filename)}
-						/>
-					{/if}
-					{#if uploadStatus === "uploading"}
-						<span class="text-sm text-surface-500">Saving…</span>
-					{:else if uploadStatus === "saved"}
-						<span class="text-sm text-success-500">Saved</span>
-					{:else if uploadStatus === "error"}
-						<span class="text-sm text-error-500"
-							>Save failed{uploadError
-								? `: ${uploadError}`
-								: ""}</span
-						>
-					{/if}
-					{#if docLoading}
-						<span class="text-sm text-surface-500"
-							>Rendering pages…</span
-						>
-					{/if}
-					{#if docError}
-						<span class="text-sm text-error-500"
-							>Error: {docError.message}</span
-						>
-						<button
-							class="btn btn-sm preset-filled-error-500"
-							onclick={dismissDocError}
-						>
-							Dismiss
-						</button>
-					{/if}
-				</AppBar.Trail>
-			</AppBar.Toolbar>
-		</AppBar>
-
-		{#if pages.length > 0 && currentDoc && pdfBytes}
-			<PdfViewer {pages} doc={currentDoc} {splitMode} {pdfBytes} />
-		{:else if !docLoading}
-			<div
-				class="flex items-center justify-center h-[80vh] text-lg text-surface-500"
-			>
-				Open a PDF file to get started.
-			</div>
-		{/if}
+{:else if pages.length > 0 && currentDoc && pdfBytes}
+	<PdfViewer {pages} doc={currentDoc} {splitMode} {pdfBytes} />
+{:else if !docLoading}
+	<div
+		class="flex items-center justify-center h-full text-lg text-surface-500"
+	>
+		Open a PDF file to get started.
 	</div>
 {/if}
