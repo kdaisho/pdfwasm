@@ -75,26 +75,5 @@
         ]
       }
     ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(pnpm *)",
-      "Bash(git *)",
-      "Bash(ls *)",
-      "Bash(cat *)",
-      "Bash(grep *)",
-      "Bash(mkdir *)",
-      "Read(~/.zshrc)"
-    ],
-    "deny": [
-      "Read(./.entire/metadata/**)",
-      "Read(./**/.env)",
-      "Read(./**/.env.*)",
-      "Read(./**/secrets/**)",
-      "Read(**/*.pem)",
-      "Read(**/*.key)",
-      "Read(~/.ssh/**)",
-      "Read(~/.aws/**)"
-    ]
   }
 }
