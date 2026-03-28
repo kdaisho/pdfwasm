@@ -17,7 +17,8 @@
 		"format:check": "prettier --check .",
 		"prepare": "husky",
 		"db:generate": "pnpm --filter @api db:generate",
-		"db:migrate": "pnpm --filter @api db:migrate"
+		"db:migrate": "pnpm --filter @api db:migrate",
+		"db:reset": "docker compose down && docker volume rm pdfwasm_pg_data && docker compose up -d && sleep 2 && pnpm run db:migrate"
 	},
 	"lint-staged": {
 		"apps/web/**/*.{js,ts,svelte}": [
