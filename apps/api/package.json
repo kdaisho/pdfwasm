@@ -4,8 +4,8 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch src/index.ts",
-		"build": "tsc",
+		"dev": "vite build --watch & node --watch dist/index.js",
+		"build": "vite build",
 		"start": "node dist/index.js",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
@@ -17,17 +17,22 @@
 		"bcrypt": "^5.1.1",
 		"dotenv": "^16.4.0",
 		"drizzle-orm": "^0.38.0",
+		"hibachi": "^0.1.0",
 		"hono": "^4.7.0",
 		"jsonwebtoken": "^9.0.2",
 		"mailersend": "^2.6.0",
 		"postgres": "^3.4.0"
 	},
 	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/bcrypt": "^5.0.2",
 		"@types/jsonwebtoken": "^9.0.7",
 		"@types/node": "^22.0.0",
 		"drizzle-kit": "^0.30.0",
+		"svelte": "^5",
 		"tsx": "^4.19.0",
-		"typescript": "~5.6.2"
+		"typescript": "~5.6.2",
+		"vite": "^8.0.3",
+		"vite-node": "^6.0.0"
 	}
 }
