@@ -7,6 +7,7 @@ node_modules
 # SvelteKit
 apps/web/.svelte-kit
 apps/web/build
+apps/email-preview/.svelte-kit
 
 # Server
 apps/api/dist/

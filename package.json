@@ -7,6 +7,7 @@
 		"dev": "concurrently --names web,api --prefix-colors cyan,yellow \"pnpm --filter @web dev\" \"pnpm --filter @api dev\"",
 		"dev:web": "pnpm --filter @web dev",
 		"dev:api": "pnpm --filter @api dev",
+		"dev:email": "pnpm --filter @email-preview dev",
 		"build": "pnpm --filter @web build",
 		"build:api": "pnpm --filter @api build",
 		"preview": "pnpm --filter @web preview",
@@ -17,7 +18,8 @@
 		"format:check": "prettier --check .",
 		"prepare": "husky",
 		"db:generate": "pnpm --filter @api db:generate",
-		"db:migrate": "pnpm --filter @api db:migrate"
+		"db:migrate": "pnpm --filter @api db:migrate",
+		"db:reset": "docker compose down && docker volume rm pdfwasm_pg_data && docker compose up -d && sleep 2 && pnpm run db:migrate"
 	},
 	"lint-staged": {
 		"apps/web/**/*.{js,ts,svelte}": [
