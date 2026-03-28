@@ -47,7 +47,7 @@
 				render: "bitmap",
 			});
 			localImageData = new ImageData(
-				new Uint8ClampedArray(rendered.data.buffer),
+				new Uint8ClampedArray(rendered.data.buffer as ArrayBuffer),
 				rendered.width,
 				rendered.height,
 			);
@@ -165,48 +165,34 @@
 </script>
 
 <div
-	class="page-wrapper"
+	class="page-wrapper relative shadow-[0_2px_8px_rgba(0,0,0,0.25)]"
 	style="width: {page.width}px; height: {page.height}px;"
 	use:observe
 >
 	{#if localImageData}
-		<canvas bind:this={renderCanvas} class="layer"></canvas>
-		<canvas bind:this={overlayCanvas} class="layer"></canvas>
+		<canvas bind:this={renderCanvas} class="absolute top-0 left-0"></canvas>
+		<canvas bind:this={overlayCanvas} class="absolute top-0 left-0"
+		></canvas>
 	{:else}
-		<div class="placeholder">
+		<div
+			class="w-full h-full bg-[#f0f0f0] flex items-center justify-center"
+		>
 			{#if rendering}
-				<span class="spinner"></span>
+				<span
+					class="spinner size-8 border-3 border-[#ddd] border-t-[#4f6ef7] rounded-full"
+				></span>
 			{/if}
 		</div>
 	{/if}
 </div>
 
 <style>
-	.page-wrapper {
-		position: relative;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-	}
-	.layer {
-		position: absolute;
-		top: 0;
-		left: 0;
-	}
-	.placeholder {
-		width: 100%;
-		height: 100%;
-		background: #f0f0f0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+	/* @keyframes can't be expressed as Tailwind utilities */
+
 	.spinner {
-		width: 32px;
-		height: 32px;
-		border: 3px solid #ddd;
-		border-top-color: #4f6ef7;
-		border-radius: 50%;
 		animation: spin 0.8s linear infinite;
 	}
+
 	@keyframes spin {
 		to {
 			transform: rotate(360deg);

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { fly } from "svelte/transition";
+
 	interface Props {
 		inputElement?: HTMLInputElement;
 		query: string;
@@ -11,6 +13,7 @@
 		wholeWord: boolean;
 		ontogglecasesensitive: () => void;
 		ontogglewholeword: () => void;
+		onclose: () => void;
 	}
 
 	let {
@@ -25,21 +28,34 @@
 		wholeWord,
 		ontogglecasesensitive,
 		ontogglewholeword,
+		onclose,
 	}: Props = $props();
 
 	let hasMatches = $derived(matchCount > 0);
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === "Escape") {
+			onclose();
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			if (e.shiftKey) onprev();
+			else onnext();
+		}
+	}
 </script>
 
 <div
-	class="sticky top-0 z-100 flex items-center gap-1 px-4 py-2.5 bg-surface-50-950 border-b border-surface-300-700 shadow-sm"
+	class="fixed top-3 right-4 z-50 flex items-center gap-1.5 rounded-lg bg-surface-50-950 border border-surface-300-700 shadow-lg px-3 py-2"
+	transition:fly={{ y: -40, duration: 150 }}
 >
 	<input
 		bind:this={inputElement}
 		type="text"
 		value={query}
 		oninput={(e) => onchange((e.target as HTMLInputElement).value)}
-		placeholder="Search in document…"
-		class="input max-w-[400px] mr-1"
+		onkeydown={handleKeyDown}
+		placeholder="Find in document…"
+		class="input w-[200px] text-sm"
 	/>
 	<button
 		onclick={ontogglecasesensitive}
@@ -61,31 +77,36 @@
 	</button>
 	{#if query}
 		<span
-			class="text-sm text-surface-500 whitespace-nowrap ml-1 min-w-[80px]"
+			class="text-xs text-surface-500 whitespace-nowrap min-w-[60px] text-center"
 		>
 			{matchCount === 0
 				? "No matches"
 				: `${currentMatchIndex + 1} of ${matchCount}`}
 		</span>
-		<div class="flex gap-0.5">
-			<button
-				onclick={onprev}
-				disabled={!hasMatches}
-				title="Previous match (⌘⇧G)"
-				class="btn-icon btn-icon-sm preset-tonal-surface"
-				class:opacity-40={!hasMatches}
-			>
-				↑
-			</button>
-			<button
-				onclick={onnext}
-				disabled={!hasMatches}
-				title="Next match (⌘G)"
-				class="btn-icon btn-icon-sm preset-tonal-surface"
-				class:opacity-40={!hasMatches}
-			>
-				↓
-			</button>
-		</div>
 	{/if}
+	<button
+		onclick={onprev}
+		disabled={!hasMatches}
+		title="Previous match (⌘⇧G)"
+		class="btn-icon btn-icon-sm preset-tonal-surface"
+		class:opacity-40={!hasMatches}
+	>
+		↑
+	</button>
+	<button
+		onclick={onnext}
+		disabled={!hasMatches}
+		title="Next match (⌘G)"
+		class="btn-icon btn-icon-sm preset-tonal-surface"
+		class:opacity-40={!hasMatches}
+	>
+		↓
+	</button>
+	<button
+		onclick={onclose}
+		title="Close (Esc)"
+		class="btn-icon btn-icon-sm preset-tonal-surface"
+	>
+		✕
+	</button>
 </div>
