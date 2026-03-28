@@ -24,7 +24,7 @@
 		"postgres": "^3.4.0"
 	},
 	"devDependencies": {
-		"@sveltejs/vite-plugin-svelte": "^5.1.1",
+		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@types/bcrypt": "^5.0.2",
 		"@types/jsonwebtoken": "^9.0.7",
 		"@types/node": "^22.0.0",
@@ -32,7 +32,7 @@
 		"svelte": "^5",
 		"tsx": "^4.19.0",
 		"typescript": "~5.6.2",
-		"vite": "^6.0.5",
+		"vite": "^8.0.3",
 		"vite-node": "^6.0.0"
 	}
 }
