@@ -1,8 +1,5 @@
 import { randomInt } from "crypto";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const words: string[] = require("../data/eff-wordlist.json");
+import words from "../data/eff-wordlist.json";
 
 export function generatePassphrase(): string {
 	const picked = Array.from(
