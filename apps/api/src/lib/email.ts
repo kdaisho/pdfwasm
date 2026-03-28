@@ -1,4 +1,6 @@
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { render } from "hibachi";
+import Otp from "../emails/Otp.svelte";
 
 const mailerSend = new MailerSend({
 	apiKey: process.env.MAILERSEND_API_KEY!,
@@ -24,31 +26,9 @@ export async function sendOtpEmail(
 			? "complete your registration"
 			: "reset your passphrase";
 
-	const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    body { font-family: system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 32px 0; }
-    .card { background: #fff; max-width: 480px; margin: 0 auto; border-radius: 12px; padding: 40px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    h1 { font-size: 22px; margin: 0 0 8px; color: #111; }
-    p { color: #555; line-height: 1.6; margin: 12px 0; }
-    .otp { font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #111; background: #f0f0f0; border-radius: 8px; padding: 16px 24px; text-align: center; margin: 24px 0; font-family: monospace; }
-    .note { font-size: 13px; color: #888; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>${subject}</h1>
-    <p>Use the code below to ${actionLabel}. It expires in 10 minutes.</p>
-    <div class="otp">${otp}</div>
-    <p class="note">If you didn't request this, you can safely ignore this email.</p>
-  </div>
-</body>
-</html>`;
-
-	const text = `Your verification code is: ${otp}\n\nUse it to ${actionLabel}. It expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`;
+	const props = { subject, actionLabel, otp };
+	const html = render({ template: Otp, props });
+	const text = render({ template: Otp, props, options: { plainText: true } });
 
 	const emailParams = new EmailParams()
 		.setFrom(new Sender(FROM_EMAIL, FROM_NAME))
