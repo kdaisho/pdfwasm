@@ -41,7 +41,7 @@ export const pdfDocuments = pgTable("pdf_documents", {
 		.notNull()
 		.references(() => users.id, { onDelete: "cascade" }),
 	filename: varchar("filename", { length: 255 }).notNull(),
-	filePath: varchar("file_path", { length: 1024 }).notNull(),
+	storageKey: varchar("storage_key", { length: 255 }).notNull(),
 	fileSize: integer("file_size").notNull(),
 	pageCount: integer("page_count"),
 	uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),

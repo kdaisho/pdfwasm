@@ -1,18 +1,25 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
 import { mkdir, unlink, writeFile, stat, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { randomUUID } from "node:crypto";
+import { fileTypeFromBuffer } from "file-type";
 import { db } from "../db/index.js";
 import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { MAX_FILE_SIZE, PDF_STORAGE_PATH } from "../constants.js";
 import type { AuthEnv } from "../types.js";
 
 const pdf = new Hono<AuthEnv>();
 
 pdf.use("/*", authMiddleware);
 
-const storagePath = process.env.PDF_STORAGE_PATH || "./storage/pdfs";
+function sanitizeFilename(raw: string): string {
+	const base = basename(raw);
+	// Strip control characters and problematic characters for Content-Disposition
+	const cleaned = base.replace(/[^\w.\-() ]/g, "_");
+	return cleaned || "document.pdf";
+}
 
 pdf.post("/upload", async (c) => {
 	const userId = c.get("userId");
@@ -23,25 +30,37 @@ pdf.post("/upload", async (c) => {
 		return c.json({ error: "No PDF file provided" }, 400);
 	}
 
-	if (!file.name.endsWith(".pdf")) {
-		return c.json({ error: "Only PDF files are allowed" }, 400);
-	}
-
-	await mkdir(storagePath, { recursive: true });
-
-	const fileId = randomUUID();
-	const filePath = join(storagePath, `${fileId}.pdf`);
 	const arrayBuffer = await file.arrayBuffer();
 	const buffer = Buffer.from(arrayBuffer);
 
-	await writeFile(filePath, buffer);
+	if (buffer.length > MAX_FILE_SIZE) {
+		return c.json(
+			{
+				error: `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)} MB`,
+			},
+			400,
+		);
+	}
+
+	const type = await fileTypeFromBuffer(buffer);
+	if (!type || type.mime !== "application/pdf") {
+		return c.json({ error: "File is not a valid PDF" }, 400);
+	}
+
+	await mkdir(PDF_STORAGE_PATH, { recursive: true });
+
+	const storageKey = `${randomUUID()}.pdf`;
+
+	await writeFile(join(PDF_STORAGE_PATH, storageKey), buffer);
+
+	const safeFilename = sanitizeFilename(file.name);
 
 	const [doc] = await db
 		.insert(pdfDocuments)
 		.values({
 			userId,
-			filename: file.name,
-			filePath,
+			filename: safeFilename,
+			storageKey,
 			fileSize: buffer.length,
 		})
 		.returning();
@@ -89,12 +108,13 @@ pdf.get("/download/:id", async (c) => {
 		return c.json({ error: "Document not found" }, 404);
 	}
 
-	const fileStats = await stat(doc.filePath).catch(() => null);
+	const fullPath = join(PDF_STORAGE_PATH, doc.storageKey);
+	const fileStats = await stat(fullPath).catch(() => null);
 	if (!fileStats) {
 		return c.json({ error: "File not found on disk" }, 404);
 	}
 
-	const fileBuffer = await readFile(doc.filePath);
+	const fileBuffer = await readFile(fullPath);
 
 	return c.body(fileBuffer, 200, {
 		"Content-Type": "application/pdf",
@@ -150,7 +170,7 @@ pdf.delete("/:id", async (c) => {
 		return c.json({ error: "Document not found" }, 404);
 	}
 
-	await unlink(doc.filePath).catch(() => {});
+	await unlink(join(PDF_STORAGE_PATH, doc.storageKey)).catch(() => {});
 
 	await db.delete(pdfDocuments).where(eq(pdfDocuments.id, docId));
 

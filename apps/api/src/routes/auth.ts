@@ -14,16 +14,17 @@ import {
 } from "../lib/session.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { AuthEnv } from "../types.js";
+import {
+	SESSION_COOKIE_NAME,
+	SESSION_MAX_AGE,
+	OTP_TTL_MS,
+	MAX_OTP_ATTEMPTS,
+} from "../constants.js";
 
 const auth = new Hono<AuthEnv>();
 
-const SESSION_COOKIE = "session_token";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days in seconds
-const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_ATTEMPTS = 3;
-
 function setSessionCookie(c: Parameters<typeof setCookie>[0], token: string) {
-	setCookie(c, SESSION_COOKIE, token, {
+	setCookie(c, SESSION_COOKIE_NAME, token, {
 		httpOnly: true,
 		sameSite: "Lax",
 		path: "/",
@@ -131,7 +132,7 @@ auth.post("/signup/verify-otp", async (c) => {
 		return c.json({ error: "OTP has expired. Please start over." }, 410);
 	}
 
-	if (record.attempts >= MAX_ATTEMPTS) {
+	if (record.attempts >= MAX_OTP_ATTEMPTS) {
 		return c.json({ error: "Too many attempts. Please start over." }, 429);
 	}
 
@@ -141,7 +142,7 @@ auth.post("/signup/verify-otp", async (c) => {
 			.update(emailVerifications)
 			.set({ attempts: record.attempts + 1 })
 			.where(eq(emailVerifications.id, record.id));
-		const remaining = MAX_ATTEMPTS - (record.attempts + 1);
+		const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
 		return c.json(
 			{
 				error: `Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
@@ -249,11 +250,11 @@ auth.post("/login", async (c) => {
 // ── Logout ────────────────────────────────────────────────────────────────
 
 auth.post("/logout", async (c) => {
-	const token = getCookie(c, SESSION_COOKIE);
+	const token = getCookie(c, SESSION_COOKIE_NAME);
 	if (token) {
 		await deleteSession(token);
 	}
-	deleteCookie(c, SESSION_COOKIE, { path: "/" });
+	deleteCookie(c, SESSION_COOKIE_NAME, { path: "/" });
 	return c.json({ ok: true });
 });
 
@@ -331,7 +332,7 @@ auth.post("/reset/verify-otp", async (c) => {
 		return c.json({ error: "OTP has expired. Please start over." }, 410);
 	}
 
-	if (record.attempts >= MAX_ATTEMPTS) {
+	if (record.attempts >= MAX_OTP_ATTEMPTS) {
 		return c.json({ error: "Too many attempts. Please start over." }, 429);
 	}
 
@@ -341,7 +342,7 @@ auth.post("/reset/verify-otp", async (c) => {
 			.update(emailVerifications)
 			.set({ attempts: record.attempts + 1 })
 			.where(eq(emailVerifications.id, record.id));
-		const remaining = MAX_ATTEMPTS - (record.attempts + 1);
+		const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
 		return c.json(
 			{
 				error: `Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
