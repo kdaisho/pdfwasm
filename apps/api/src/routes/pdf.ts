@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { eq, and } from "drizzle-orm";
 import { mkdir, unlink, writeFile, stat, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { randomUUID } from "node:crypto";
+import { fileTypeFromBuffer } from "file-type";
 import { db } from "../db/index.js";
 import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -13,6 +14,14 @@ const pdf = new Hono<AuthEnv>();
 pdf.use("/*", authMiddleware);
 
 const storagePath = process.env.PDF_STORAGE_PATH || "./storage/pdfs";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function sanitizeFilename(raw: string): string {
+	const base = basename(raw);
+	// Strip control characters and problematic characters for Content-Disposition
+	const cleaned = base.replace(/[^\w.\-() ]/g, "_");
+	return cleaned || "document.pdf";
+}
 
 pdf.post("/upload", async (c) => {
 	const userId = c.get("userId");
@@ -23,24 +32,37 @@ pdf.post("/upload", async (c) => {
 		return c.json({ error: "No PDF file provided" }, 400);
 	}
 
-	if (!file.name.endsWith(".pdf")) {
-		return c.json({ error: "Only PDF files are allowed" }, 400);
+	const arrayBuffer = await file.arrayBuffer();
+	const buffer = Buffer.from(arrayBuffer);
+
+	if (buffer.length > MAX_FILE_SIZE) {
+		return c.json(
+			{
+				error: `File too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)} MB`,
+			},
+			400,
+		);
+	}
+
+	const type = await fileTypeFromBuffer(buffer);
+	if (!type || type.mime !== "application/pdf") {
+		return c.json({ error: "File is not a valid PDF" }, 400);
 	}
 
 	await mkdir(storagePath, { recursive: true });
 
 	const fileId = randomUUID();
 	const filePath = join(storagePath, `${fileId}.pdf`);
-	const arrayBuffer = await file.arrayBuffer();
-	const buffer = Buffer.from(arrayBuffer);
 
 	await writeFile(filePath, buffer);
+
+	const safeFilename = sanitizeFilename(file.name);
 
 	const [doc] = await db
 		.insert(pdfDocuments)
 		.values({
 			userId,
-			filename: file.name,
+			filename: safeFilename,
 			filePath,
 			fileSize: buffer.length,
 		})

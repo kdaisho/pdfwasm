@@ -17,6 +17,7 @@
 		"bcrypt": "^5.1.1",
 		"dotenv": "^16.4.0",
 		"drizzle-orm": "^0.38.0",
+		"file-type": "^22.0.0",
 		"hibachi": "^0.1.0",
 		"hono": "^4.7.0",
 		"jsonwebtoken": "^9.0.2",
