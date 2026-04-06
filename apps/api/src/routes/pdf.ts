@@ -49,10 +49,9 @@ pdf.post("/upload", async (c) => {
 
 	await mkdir(PDF_STORAGE_PATH, { recursive: true });
 
-	const fileId = randomUUID();
-	const filePath = join(PDF_STORAGE_PATH, `${fileId}.pdf`);
+	const storageKey = `${randomUUID()}.pdf`;
 
-	await writeFile(filePath, buffer);
+	await writeFile(join(PDF_STORAGE_PATH, storageKey), buffer);
 
 	const safeFilename = sanitizeFilename(file.name);
 
@@ -61,7 +60,7 @@ pdf.post("/upload", async (c) => {
 		.values({
 			userId,
 			filename: safeFilename,
-			filePath,
+			storageKey,
 			fileSize: buffer.length,
 		})
 		.returning();
@@ -109,12 +108,13 @@ pdf.get("/download/:id", async (c) => {
 		return c.json({ error: "Document not found" }, 404);
 	}
 
-	const fileStats = await stat(doc.filePath).catch(() => null);
+	const fullPath = join(PDF_STORAGE_PATH, doc.storageKey);
+	const fileStats = await stat(fullPath).catch(() => null);
 	if (!fileStats) {
 		return c.json({ error: "File not found on disk" }, 404);
 	}
 
-	const fileBuffer = await readFile(doc.filePath);
+	const fileBuffer = await readFile(fullPath);
 
 	return c.body(fileBuffer, 200, {
 		"Content-Type": "application/pdf",
@@ -170,7 +170,7 @@ pdf.delete("/:id", async (c) => {
 		return c.json({ error: "Document not found" }, 404);
 	}
 
-	await unlink(doc.filePath).catch(() => {});
+	await unlink(join(PDF_STORAGE_PATH, doc.storageKey)).catch(() => {});
 
 	await db.delete(pdfDocuments).where(eq(pdfDocuments.id, docId));
 
