@@ -7,14 +7,12 @@ import { fileTypeFromBuffer } from "file-type";
 import { db } from "../db/index.js";
 import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { MAX_FILE_SIZE, PDF_STORAGE_PATH } from "../constants.js";
 import type { AuthEnv } from "../types.js";
 
 const pdf = new Hono<AuthEnv>();
 
 pdf.use("/*", authMiddleware);
-
-const storagePath = process.env.PDF_STORAGE_PATH || "./storage/pdfs";
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 function sanitizeFilename(raw: string): string {
 	const base = basename(raw);
@@ -49,10 +47,10 @@ pdf.post("/upload", async (c) => {
 		return c.json({ error: "File is not a valid PDF" }, 400);
 	}
 
-	await mkdir(storagePath, { recursive: true });
+	await mkdir(PDF_STORAGE_PATH, { recursive: true });
 
 	const fileId = randomUUID();
-	const filePath = join(storagePath, `${fileId}.pdf`);
+	const filePath = join(PDF_STORAGE_PATH, `${fileId}.pdf`);
 
 	await writeFile(filePath, buffer);
 

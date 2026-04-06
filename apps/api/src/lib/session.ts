@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { sessions } from "../db/schema.js";
-
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+import { SESSION_DURATION_MS } from "../constants.js";
 
 export async function createSession(userId: string): Promise<string> {
 	const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
