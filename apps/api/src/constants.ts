@@ -6,6 +6,7 @@ export const SESSION_DURATION_MS = SESSION_MAX_AGE * 1000;
 // ── OTP ──────────────────────────────────────────────────────────────────────
 export const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 export const MAX_OTP_ATTEMPTS = 3;
+export const OTP_RESEND_COOLDOWN_MS = 20 * 1000; // 20 seconds
 
 // ── PDF uploads ──────────────────────────────────────────────────────────────
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
