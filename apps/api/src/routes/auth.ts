@@ -19,7 +19,18 @@ import {
 	SESSION_MAX_AGE,
 	OTP_TTL_MS,
 	MAX_OTP_ATTEMPTS,
+	OTP_RESEND_COOLDOWN_MS,
 } from "../constants.js";
+
+function checkResendCooldown(createdAt: Date): {
+	retryAfterSec: number;
+} | null {
+	const elapsedMs = Date.now() - createdAt.getTime();
+	if (elapsedMs >= OTP_RESEND_COOLDOWN_MS) return null;
+	return {
+		retryAfterSec: Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsedMs) / 1000),
+	};
+}
 
 const auth = new Hono<AuthEnv>();
 
@@ -75,6 +86,32 @@ auth.post("/signup/init", async (c) => {
 
 	if (existing.length > 0) {
 		return c.json({ error: "Email already registered" }, 409);
+	}
+
+	const [recentSignup] = await db
+		.select({ createdAt: emailVerifications.createdAt })
+		.from(emailVerifications)
+		.where(
+			and(
+				eq(emailVerifications.email, email.toLowerCase()),
+				eq(emailVerifications.type, "signup"),
+			),
+		)
+		.orderBy(desc(emailVerifications.createdAt))
+		.limit(1);
+
+	if (recentSignup) {
+		const cooldown = checkResendCooldown(recentSignup.createdAt);
+		if (cooldown) {
+			c.header("Retry-After", String(cooldown.retryAfterSec));
+			return c.json(
+				{
+					error: `Please wait ${cooldown.retryAfterSec} second${cooldown.retryAfterSec === 1 ? "" : "s"} before requesting another code.`,
+					retryAfter: cooldown.retryAfterSec,
+				},
+				429,
+			);
+		}
 	}
 
 	const otp = generateOtp();
@@ -275,6 +312,32 @@ auth.post("/reset/init", async (c) => {
 	if (!user) {
 		// Generic message to prevent email enumeration
 		return c.json({ ok: true });
+	}
+
+	const [recentReset] = await db
+		.select({ createdAt: emailVerifications.createdAt })
+		.from(emailVerifications)
+		.where(
+			and(
+				eq(emailVerifications.email, email.toLowerCase()),
+				eq(emailVerifications.type, "password_reset"),
+			),
+		)
+		.orderBy(desc(emailVerifications.createdAt))
+		.limit(1);
+
+	if (recentReset) {
+		const cooldown = checkResendCooldown(recentReset.createdAt);
+		if (cooldown) {
+			c.header("Retry-After", String(cooldown.retryAfterSec));
+			return c.json(
+				{
+					error: `Please wait ${cooldown.retryAfterSec} second${cooldown.retryAfterSec === 1 ? "" : "s"} before requesting another code.`,
+					retryAfter: cooldown.retryAfterSec,
+				},
+				429,
+			);
+		}
 	}
 
 	const otp = generateOtp();
