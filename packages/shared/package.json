@@ -1,0 +1,9 @@
+{
+	"name": "@pdfwasm/shared",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"exports": {
+		"./constants": "./src/constants.ts"
+	}
+}

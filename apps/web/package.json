@@ -12,6 +12,7 @@
 		"lint:fix": "eslint src --fix"
 	},
 	"dependencies": {
+		"@pdfwasm/shared": "workspace:*",
 		"@hyzyla/pdfium": "^2.1.9",
 		"pdf-lib": "^1.17.1"
 	},
