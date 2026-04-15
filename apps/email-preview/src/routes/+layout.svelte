@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { templates } from "$lib/registry";
 	import { page } from "$app/state";
+	import { resolve } from "$app/paths";
 
 	let { children } = $props();
 </script>
@@ -13,11 +14,11 @@
 			Email Templates
 		</h2>
 
-		{#each Object.entries(templates) as [slug, entry]}
+		{#each Object.entries(templates) as [slug, entry] (slug)}
 			<div style="margin-bottom: 16px;">
 				<div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">{entry.label}</div>
-				{#each Object.keys(entry.variants) as variant}
-					{@const href = `/${slug}/${variant}`}
+				{#each Object.keys(entry.variants) as variant (variant)}
+					{@const href = resolve("/[template]/[variant]", { template: slug, variant })}
 					{@const active = page.url.pathname === href}
 					<a
 						{href}
