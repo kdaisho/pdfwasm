@@ -12,8 +12,8 @@
 		"build:api": "pnpm --filter @api build",
 		"preview": "pnpm --filter @web preview",
 		"check": "pnpm --filter @web check",
-		"lint": "pnpm --filter @web lint",
-		"lint:fix": "pnpm --filter @web lint:fix",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"prepare": "husky",
@@ -22,11 +22,8 @@
 		"db:reset": "docker compose down && docker volume rm pdfwasm_pg_data && docker compose up -d && sleep 2 && pnpm run db:migrate"
 	},
 	"lint-staged": {
-		"apps/web/**/*.{js,ts,svelte}": [
-			"pnpm --filter @web exec eslint --fix",
-			"prettier --write"
-		],
-		"apps/api/**/*.{js,ts}": [
+		"{apps/web,apps/api,packages}/**/*.{js,ts,svelte}": [
+			"eslint --fix",
 			"prettier --write"
 		],
 		"*.{json,css,md,html}": [
@@ -34,10 +31,20 @@
 		]
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.39.3",
 		"concurrently": "^9.1.0",
+		"eslint": "^9.39.3",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.15.0",
+		"eslint-plugin-tailwindcss": "4.0.0-beta.0",
+		"eslint-plugin-tree-shaking": "^1.12.2",
+		"globals": "^17.3.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.2.7",
 		"prettier": "^3.8.1",
-		"prettier-plugin-svelte": "^3.5.0"
+		"prettier-plugin-svelte": "^3.5.0",
+		"svelte-eslint-parser": "^1.5.1",
+		"tailwindcss": "^4.2.1",
+		"typescript-eslint": "^8.56.1"
 	}
 }

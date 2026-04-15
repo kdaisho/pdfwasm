@@ -8,9 +8,30 @@ importers:
 
   .:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.3
+        version: 9.39.3
       concurrently:
         specifier: ^9.1.0
         version: 9.2.1
+      eslint:
+        specifier: ^9.39.3
+        version: 9.39.3(jiti@2.6.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@9.39.3(jiti@2.6.1))
+      eslint-plugin-svelte:
+        specifier: ^3.15.0
+        version: 3.15.0(eslint@9.39.3(jiti@2.6.1))(svelte@5.53.7)
+      eslint-plugin-tailwindcss:
+        specifier: 4.0.0-beta.0
+        version: 4.0.0-beta.0(tailwindcss@4.2.2)
+      eslint-plugin-tree-shaking:
+        specifier: ^1.12.2
+        version: 1.12.2
+      globals:
+        specifier: ^17.3.0
+        version: 17.4.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -23,6 +44,15 @@ importers:
       prettier-plugin-svelte:
         specifier: ^3.5.0
         version: 3.5.1(prettier@3.8.1)(svelte@5.53.7)
+      svelte-eslint-parser:
+        specifier: ^1.5.1
+        version: 1.6.0(svelte@5.53.7)
+      tailwindcss:
+        specifier: ^4.2.1
+        version: 4.2.2
+      typescript-eslint:
+        specifier: ^8.56.1
+        version: 8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.6.3)
 
   apps/api:
     dependencies:
@@ -125,9 +155,6 @@ importers:
         specifier: ^1.17.1
         version: 1.17.1
     devDependencies:
-      '@eslint/js':
-        specifier: ^9.39.3
-        version: 9.39.3
       '@skeletonlabs/skeleton':
         specifier: ^4.12.0
         version: 4.12.1(tailwindcss@4.2.1)
@@ -143,24 +170,6 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.2.2
         version: 4.2.2(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
-      eslint:
-        specifier: ^9.39.3
-        version: 9.39.3(jiti@2.6.1)
-      eslint-config-prettier:
-        specifier: ^10.1.8
-        version: 10.1.8(eslint@9.39.3(jiti@2.6.1))
-      eslint-plugin-svelte:
-        specifier: ^3.15.0
-        version: 3.15.0(eslint@9.39.3(jiti@2.6.1))(svelte@5.53.7)
-      eslint-plugin-tailwindcss:
-        specifier: 4.0.0-beta.0
-        version: 4.0.0-beta.0(tailwindcss@4.2.1)
-      eslint-plugin-tree-shaking:
-        specifier: ^1.12.2
-        version: 1.12.2
-      globals:
-        specifier: ^17.3.0
-        version: 17.4.0
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
@@ -173,18 +182,12 @@ importers:
       svelte-check:
         specifier: ^4
         version: 4.4.4(picomatch@4.0.3)(svelte@5.53.7)(typescript@5.6.3)
-      svelte-eslint-parser:
-        specifier: ^1.5.1
-        version: 1.6.0(svelte@5.53.7)
       tailwindcss:
         specifier: ^4.2.1
         version: 4.2.1
       typescript:
         specifier: ~5.6.2
         version: 5.6.3
-      typescript-eslint:
-        specifier: ^8.56.1
-        version: 8.56.1(eslint@9.39.3(jiti@2.6.1))(typescript@5.6.3)
       vite:
         specifier: ^8.0.3
         version: 8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
@@ -4747,13 +4750,13 @@ snapshots:
     transitivePeerDependencies:
       - ts-node
 
-  eslint-plugin-tailwindcss@4.0.0-beta.0(tailwindcss@4.2.1):
+  eslint-plugin-tailwindcss@4.0.0-beta.0(tailwindcss@4.2.2):
     dependencies:
       fast-glob: 3.3.3
       postcss: 8.5.8
       synckit: 0.11.12
-      tailwind-api-utils: 1.0.3(tailwindcss@4.2.1)
-      tailwindcss: 4.2.1
+      tailwind-api-utils: 1.0.3(tailwindcss@4.2.2)
+      tailwindcss: 4.2.2
 
   eslint-plugin-tree-shaking@1.12.2: {}
 
@@ -5836,12 +5839,12 @@ snapshots:
     dependencies:
       '@pkgr/core': 0.2.9
 
-  tailwind-api-utils@1.0.3(tailwindcss@4.2.1):
+  tailwind-api-utils@1.0.3(tailwindcss@4.2.2):
     dependencies:
       enhanced-resolve: 5.20.0
       jiti: 2.6.1
       local-pkg: 1.1.2
-      tailwindcss: 4.2.1
+      tailwindcss: 4.2.2
 
   tailwindcss@4.2.1: {}
 
