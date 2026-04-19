@@ -27,8 +27,8 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 **Purpose**: Confirm environment. No new files or dependencies are required.
 
-- [ ] T001 Verify checked out on branch `KDA-27/allow-deleting-pages-in-split-mode` (run `git branch --show-current`).
-- [ ] T002 Verify baseline quality gates pass before edits: run `pnpm --filter @pdfwasm/web check` and `pnpm --filter @pdfwasm/web lint` from repo root; both MUST report 0 errors.
+- [x] T001 Verify checked out on branch `KDA-27/allow-deleting-pages-in-split-mode` (run `git branch --show-current`).
+- [x] T002 Verify baseline quality gates pass before edits: run `pnpm --filter @pdfwasm/web check` and `pnpm --filter @pdfwasm/web lint` from repo root; both MUST report 0 errors.
 
 ---
 
@@ -38,8 +38,8 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 **CRITICAL**: Finish Phase 2 before starting any user-story phase.
 
-- [ ] T003 Declare `deletedPages: Set<number> = $state(new Set())` in `apps/web/src/lib/components/PdfViewer.svelte` immediately after the existing `splitPoints` declaration (around line 32). Keep the same shape as `splitPoints` for symmetry.
-- [ ] T004 Add `toggleDeletedPage(pageIndex: number)` function in `apps/web/src/lib/components/PdfViewer.svelte`, placed adjacent to the existing `toggleSplitPoint` (around line 125). Use the clone-and-reassign pattern from `research.md` decision 2, including the `svelte/prefer-svelte-reactivity` eslint-disable comment used beside `splitPoints`.
+- [x] T003 Declare `deletedPages: Set<number> = $state(new Set())` in `apps/web/src/lib/components/PdfViewer.svelte` immediately after the existing `splitPoints` declaration (around line 32). Keep the same shape as `splitPoints` for symmetry.
+- [x] T004 Add `toggleDeletedPage(pageIndex: number)` function in `apps/web/src/lib/components/PdfViewer.svelte`, placed adjacent to the existing `toggleSplitPoint` (around line 125). Use the clone-and-reassign pattern from `research.md` decision 2, including the `svelte/prefer-svelte-reactivity` eslint-disable comment used beside `splitPoints`.
 
 **Checkpoint**: Foundation ready — all three user-story phases can proceed.
 
@@ -53,12 +53,12 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 ### Implementation for User Story 1
 
-- [ ] T005 [P] [US1] In `apps/web/src/lib/services/splitPdf.ts`, extend the `splitPdf` signature to `splitPdf(pdfBytes: Uint8Array, splitPoints: number[], excludedPages?: number[]): Promise<Uint8Array[]>`. Default `excludedPages` to `[]` inside the function body.
-- [ ] T006 [P] [US1] In `apps/web/src/lib/services/splitPdf.ts`, implement the two contract rules from `contracts/splitPdf.md`: (a) filter excluded indices out of each segment's `indices` array before `copyPages`; (b) skip any segment whose filtered indices are empty (drop from the `ranges` loop so no empty PDF is pushed onto `results`). Update the JSDoc comment on `splitPdf` to document `excludedPages` only (no `what`-comments; constitution V).
-- [ ] T007 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, update `doExport` (around line 136) to pass `[...deletedPages]` as the third argument to `splitPdf`.
-- [ ] T008 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, add a `$derived` `effectivePageCount = pages.length - deletedPages.size`. Place it next to the existing `groupCount` derivation (around line 78).
-- [ ] T009 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, add the FR-009 guard to both `handleExport` and `doExport`: short-circuit with no action when `effectivePageCount === 0`. Add a `disabled` binding on the Export button (around line 277) that is truthy when `exporting`, `splitPoints.size === 0`, OR `effectivePageCount === 0`.
-- [ ] T010 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, render an × toggle button inside each thumbnail wrapper (in the `{#each pages}` block around line 290). Wire its `onclick` to `toggleDeletedPage(page.index)`. For this story, a minimally-styled button using a Tailwind utility positioning class (`absolute top-1 right-1`) is sufficient — visual polish (hover-reveal, dimming) is US2.
+- [x] T005 [P] [US1] In `apps/web/src/lib/services/splitPdf.ts`, extend the `splitPdf` signature to `splitPdf(pdfBytes: Uint8Array, splitPoints: number[], excludedPages?: number[]): Promise<Uint8Array[]>`. Default `excludedPages` to `[]` inside the function body.
+- [x] T006 [P] [US1] In `apps/web/src/lib/services/splitPdf.ts`, implement the two contract rules from `contracts/splitPdf.md`: (a) filter excluded indices out of each segment's `indices` array before `copyPages`; (b) skip any segment whose filtered indices are empty (drop from the `ranges` loop so no empty PDF is pushed onto `results`). Update the JSDoc comment on `splitPdf` to document `excludedPages` only (no `what`-comments; constitution V).
+- [x] T007 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, update `doExport` (around line 136) to pass `[...deletedPages]` as the third argument to `splitPdf`.
+- [x] T008 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, add a `$derived` `effectivePageCount = pages.length - deletedPages.size`. Place it next to the existing `groupCount` derivation (around line 78).
+- [x] T009 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, add the FR-009 guard to both `handleExport` and `doExport`: short-circuit with no action when `effectivePageCount === 0`. Add a `disabled` binding on the Export button (around line 277) that is truthy when `exporting`, `splitPoints.size === 0`, OR `effectivePageCount === 0`.
+- [x] T010 [US1] In `apps/web/src/lib/components/PdfViewer.svelte`, render an × toggle button inside each thumbnail wrapper (in the `{#each pages}` block around line 290). Wire its `onclick` to `toggleDeletedPage(page.index)`. For this story, a minimally-styled button using a Tailwind utility positioning class (`absolute top-1 right-1`) is sufficient — visual polish (hover-reveal, dimming) is US2.
 
 **Checkpoint**: US1 functionally complete. Before moving on: manually walk `quickstart.md` § 4 → User Story 1 rows 1.1–1.5 and confirm each passes. This is the MVP.
 
@@ -72,11 +72,11 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, conditionally apply `opacity-40` on the thumbnail wrapper (the `div` around line 300) when `deletedPages.has(page.index)`. Use Svelte's `class:` directive.
-- [ ] T012 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, conditionally apply `line-through` on the page-number label (around line 333) when `deletedPages.has(page.index)`. Use Svelte's `class:` directive.
-- [ ] T013 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, apply the hover-reveal pattern from the existing split gutter (`group` + `group-hover:opacity-100` / `opacity-0`) to the × button added in T010. Override to always-visible when the page is already excluded so the user can always toggle back. Ensure the thumbnail wrapper gets the `group` class so `group-hover` works on the nested button.
-- [ ] T014 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, replace the existing status summary (the `<span>` showing `{splitPoints.size} split point(s) → {splitPoints.size + 1} files` around line 269) with a live summary that reflects exclusions: split-point count, real file count (derive from the same non-empty-segment rule as `splitPdf`, OR call a small pure helper derived from `splitPoints` + `deletedPages` + `pages.length`), and excluded-page count when non-zero. Keep it a single compact line to match existing split-bar styling.
-- [ ] T015 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, render a compact inline warning near the Export button (inside the split-mode header around line 252) when `effectivePageCount === 0`. Use Skeleton/Tailwind warning classes consistent with the existing `bg-warning-100-900` header. The warning text states that every page is currently excluded and export is blocked until one is unmarked.
+- [x] T011 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, conditionally apply `opacity-40` on the thumbnail wrapper (the `div` around line 300) when `deletedPages.has(page.index)`. Use Svelte's `class:` directive.
+- [x] T012 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, conditionally apply `line-through` on the page-number label (around line 333) when `deletedPages.has(page.index)`. Use Svelte's `class:` directive.
+- [x] T013 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, apply the hover-reveal pattern from the existing split gutter (`group` + `group-hover:opacity-100` / `opacity-0`) to the × button added in T010. Override to always-visible when the page is already excluded so the user can always toggle back. Ensure the thumbnail wrapper gets the `group` class so `group-hover` works on the nested button.
+- [x] T014 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, replace the existing status summary (the `<span>` showing `{splitPoints.size} split point(s) → {splitPoints.size + 1} files` around line 269) with a live summary that reflects exclusions: split-point count, real file count (derive from the same non-empty-segment rule as `splitPdf`, OR call a small pure helper derived from `splitPoints` + `deletedPages` + `pages.length`), and excluded-page count when non-zero. Keep it a single compact line to match existing split-bar styling.
+- [x] T015 [US2] In `apps/web/src/lib/components/PdfViewer.svelte`, render a compact inline warning near the Export button (inside the split-mode header around line 252) when `effectivePageCount === 0`. Use Skeleton/Tailwind warning classes consistent with the existing `bg-warning-100-900` header. The warning text states that every page is currently excluded and export is blocked until one is unmarked.
 
 **Checkpoint**: US2 complete. Walk `quickstart.md` § 4 → User Story 2 rows 2.1–2.3 and the Edge Case rows E.1–E.2; all should pass.
 
@@ -90,7 +90,7 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] In `apps/web/src/lib/components/PdfViewer.svelte`, extend the existing split-mode-exit `$effect` (around lines 119–123 — currently resets `splitPoints`) to also reset `deletedPages = new Set()`. Do NOT introduce a second `$effect`; keep exit-reset in one place.
+- [x] T016 [US3] In `apps/web/src/lib/components/PdfViewer.svelte`, extend the existing split-mode-exit `$effect` (around lines 119–123 — currently resets `splitPoints`) to also reset `deletedPages = new Set()`. Do NOT introduce a second `$effect`; keep exit-reset in one place.
 
 **Checkpoint**: US3 complete. All three user stories independently functional.
 
@@ -100,11 +100,11 @@ Web app monorepo. All edited files live under `apps/web/src/lib/`. Only two file
 
 **Purpose**: Prove the quality gates and run the full manual verification.
 
-- [ ] T017 Run `pnpm --filter @pdfwasm/web check` from repo root. MUST report 0 errors (constitution V).
-- [ ] T018 Run `pnpm --filter @pdfwasm/web lint` from repo root. MUST report 0 errors (constitution V).
+- [x] T017 Run `pnpm --filter @pdfwasm/web check` from repo root. MUST report 0 errors (constitution V).
+- [x] T018 Run `pnpm --filter @pdfwasm/web lint` from repo root. MUST report 0 errors (constitution V).
 - [ ] T019 Walk through every row of `specs/001-delete-pages-split/quickstart.md` § 4 (User Story 1, 2, 3 tables + Edge Case) in a real browser. Every row must match its expected outcome.
-- [ ] T020 [P] Re-read the `<style>` block in `apps/web/src/lib/components/PdfViewer.svelte` — confirm no new rules were added, or that any additions fall into one of the three exceptions in constitution II (`:global()`, `@keyframes`, or something Tailwind genuinely cannot express) AND have blank-line separation.
-- [ ] T021 [P] Confirm no new dependencies were added (`git diff main -- apps/web/package.json` should be empty). No Vite config changes (`git diff main -- apps/web/vite.config.ts` should be empty).
+- [x] T020 [P] Re-read the `<style>` block in `apps/web/src/lib/components/PdfViewer.svelte` — confirm no new rules were added, or that any additions fall into one of the three exceptions in constitution II (`:global()`, `@keyframes`, or something Tailwind genuinely cannot express) AND have blank-line separation.
+- [x] T021 [P] Confirm no new dependencies were added (`git diff main -- apps/web/package.json` should be empty). No Vite config changes (`git diff main -- apps/web/vite.config.ts` should be empty).
 
 ---
 

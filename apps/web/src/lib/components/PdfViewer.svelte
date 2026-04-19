@@ -3,7 +3,11 @@
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
-	import { splitPdf, downloadSplitPdfs } from "$lib/services/splitPdf";
+	import {
+		splitPdf,
+		downloadSplitPdfs,
+		computeSegmentPageIndices,
+	} from "$lib/services/splitPdf";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
@@ -30,6 +34,7 @@
 	let wholeWord = $state(false);
 	let currentMatchIndex = $state(-1);
 	let splitPoints: Set<number> = $state(new Set());
+	let deletedPages: Set<number> = $state(new Set());
 	let exporting = $state(false);
 	let thumbnailWidth = $state(250);
 
@@ -77,6 +82,16 @@
 
 	let groupCount = $derived(splitPoints.size > 0 ? splitPoints.size + 1 : 1);
 
+	let effectivePageCount = $derived(pages.length - deletedPages.size);
+
+	let fileCount = $derived(
+		computeSegmentPageIndices(
+			pages.length,
+			[...splitPoints],
+			[...deletedPages],
+		).length,
+	);
+
 	// Reset to first match only when search parameters change (not when background extraction adds chars)
 	$effect(() => {
 		debouncedQuery;
@@ -115,10 +130,11 @@
 		window.scrollTo({ top: targetY, behavior: "smooth" });
 	});
 
-	// Clear split points when exiting split mode
+	// Clear split points and exclusions when exiting split mode
 	$effect(() => {
 		if (!splitMode) {
 			splitPoints = new Set();
+			deletedPages = new Set();
 		}
 	});
 
@@ -133,11 +149,27 @@
 		splitPoints = next;
 	}
 
+	function toggleDeletedPage(pageIndex: number) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway copy, not reactive state
+		const next = new Set(deletedPages);
+		if (next.has(pageIndex)) {
+			next.delete(pageIndex);
+		} else {
+			next.add(pageIndex);
+		}
+		deletedPages = next;
+	}
+
 	async function doExport() {
-		if (splitPoints.size === 0 || exporting) return;
+		if (splitPoints.size === 0 || exporting || effectivePageCount === 0)
+			return;
 		exporting = true;
 		try {
-			const segments = await splitPdf(pdfBytes, [...splitPoints]);
+			const segments = await splitPdf(
+				pdfBytes,
+				[...splitPoints],
+				[...deletedPages],
+			);
 			downloadSplitPdfs(segments);
 		} finally {
 			exporting = false;
@@ -145,7 +177,8 @@
 	}
 
 	function handleExport() {
-		if (splitPoints.size === 0 || exporting) return;
+		if (splitPoints.size === 0 || exporting || effectivePageCount === 0)
+			return;
 		if (auth.isAuthenticated) {
 			doExport();
 		} else {
@@ -269,12 +302,23 @@
 				<span class="text-sm text-warning-800-200">
 					{splitPoints.size} split point{splitPoints.size > 1
 						? "s"
-						: ""} selected &rarr; {splitPoints.size + 1} files
+						: ""} &rarr; {fileCount} file{fileCount === 1
+						? ""
+						: "s"}{#if deletedPages.size > 0}
+						&middot; {deletedPages.size} excluded{/if}
 				</span>
+				{#if effectivePageCount === 0}
+					<span
+						class="text-sm font-medium text-warning-900-100"
+						role="alert"
+					>
+						All pages excluded — unmark a page to export.
+					</span>
+				{/if}
 				<button
 					class="btn btn-sm preset-filled-success-500"
 					onclick={handleExport}
-					disabled={exporting}
+					disabled={exporting || effectivePageCount === 0}
 				>
 					{exporting ? "Exporting…" : "Export Split PDFs"}
 				</button>
@@ -298,7 +342,8 @@
 					: -1}
 			{@const gIdx = pageGroupMap.get(page.index) ?? 0}
 			<div
-				class="flex flex-col items-center rounded-lg p-2 -m-1"
+				class="group relative flex flex-col items-center rounded-lg p-2 -m-1 transition-opacity"
+				class:opacity-40={splitMode && deletedPages.has(page.index)}
 				style="{splitMode
 					? `width: ${thumbnailWidth}px`
 					: ''}{splitMode && groupCount > 1
@@ -306,6 +351,25 @@
 					: ''}"
 				use:trackPageRef={page.index}
 			>
+				{#if splitMode}
+					<button
+						type="button"
+						class="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-surface-50 text-base leading-none text-surface-700 shadow transition-opacity duration-150 hover:bg-surface-200 {deletedPages.has(
+							page.index,
+						)
+							? 'opacity-100'
+							: 'opacity-0 group-hover:opacity-100'}"
+						onclick={() => toggleDeletedPage(page.index)}
+						title={deletedPages.has(page.index)
+							? `Include page ${page.index + 1}`
+							: `Exclude page ${page.index + 1}`}
+						aria-label={deletedPages.has(page.index)
+							? `Include page ${page.index + 1}`
+							: `Exclude page ${page.index + 1}`}
+					>
+						&times;
+					</button>
+				{/if}
 				{#if splitMode && groupCount > 1}
 					<div
 						class="text-xs font-medium mb-1 rounded-full px-2 py-0.5"
@@ -330,7 +394,10 @@
 					/>
 				</div>
 				{#if splitMode}
-					<div class="text-xs text-surface-500 mt-3">
+					<div
+						class="text-xs text-surface-500 mt-3"
+						class:line-through={deletedPages.has(page.index)}
+					>
 						{page.index + 1}
 					</div>
 				{/if}
