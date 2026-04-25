@@ -16,6 +16,7 @@
 	let overlayCanvas: HTMLCanvasElement = $state(undefined!);
 	let rendering = $state(false);
 	let localImageData: ImageData | null = $state(null);
+	let lastRendered: PageData | null = $state(null);
 
 	function pdfToCanvas(
 		left: number,
@@ -34,27 +35,39 @@
 	}
 
 	async function renderPage() {
-		if (localImageData || rendering) return;
+		if (rendering || lastRendered === page) return;
+		const target = page;
 		rendering = true;
 		try {
-			const pdfPage = doc.getPage(page.index);
+			const pdfPage = doc.getPage(target.index);
 			// Extract chars if not yet populated (visible pages get priority)
-			if (page.chars.length === 0) {
-				page.chars = extractCharBoxes(pdfPage);
+			if (target.chars.length === 0) {
+				target.chars = extractCharBoxes(pdfPage);
 			}
 			const rendered = await pdfPage.render({
 				scale: RENDER_SCALE,
 				render: "bitmap",
 			});
+			if (page !== target) return; // superseded by a prop change mid-render
 			localImageData = new ImageData(
 				new Uint8ClampedArray(rendered.data.buffer as ArrayBuffer),
 				rendered.width,
 				rendered.height,
 			);
+			lastRendered = target;
 		} finally {
 			rendering = false;
 		}
 	}
+
+	// Re-render when `page` prop changes (e.g. after insert reuses the DOM node).
+	// First render is still driven by the IntersectionObserver in `observe`.
+	$effect(() => {
+		page;
+		if (lastRendered && lastRendered !== page) {
+			void renderPage();
+		}
+	});
 
 	function observe(node: HTMLDivElement) {
 		const observer = new IntersectionObserver(
