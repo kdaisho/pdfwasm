@@ -49,7 +49,7 @@
 				: 'preset-filled'}"
 			onclick={onToggleSplit}
 		>
-			{splitMode ? "Exit Split Mode" : "Split Mode"}
+			{splitMode ? "Exit Edit Mode" : "Edit Mode"}
 		</button>
 	{/if}
 
