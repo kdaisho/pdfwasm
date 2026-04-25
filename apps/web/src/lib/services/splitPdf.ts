@@ -1,74 +1,94 @@
 import { PDFDocument } from "pdf-lib";
 
+/** One entry in the combined sequence: a single page, identified by its source and that source's page index. */
+export interface SequenceEntry {
+	sourceId: string;
+	pageIndex: number;
+}
+
 /**
- * Compute the page indices that make up each exported segment, given split
- * points and excluded pages. Empty segments (all pages excluded) are dropped.
- * Exported so the viewer can derive the live file count without duplicating
- * the segment-building rules.
+ * Compute the sequence positions that make up each exported segment, given
+ * split points and excluded positions. Empty segments (all positions excluded)
+ * are dropped. Exported so the viewer can derive the live file count without
+ * duplicating the segment-building rules.
  */
-export function computeSegmentPageIndices(
-	totalPages: number,
+export function computeSegmentPositions(
+	sequenceLength: number,
 	splitPoints: number[],
-	excludedPages: number[] = [],
+	excludedPositions: number[] = [],
 ): number[][] {
 	const sorted = [...splitPoints].sort((a, b) => a - b);
-	const excluded = new Set(excludedPages);
+	const excluded = new Set(excludedPositions);
 
 	const segments: number[][] = [];
 	let start = 0;
 
 	const pushSegment = (rangeStart: number, rangeEnd: number) => {
-		const indices: number[] = [];
+		const positions: number[] = [];
 		for (let i = rangeStart; i < rangeEnd; i++) {
-			if (!excluded.has(i)) indices.push(i);
+			if (!excluded.has(i)) positions.push(i);
 		}
-		if (indices.length > 0) segments.push(indices);
+		if (positions.length > 0) segments.push(positions);
 	};
 
 	for (const sp of sorted) {
 		const end = sp + 1;
-		if (end > start && end <= totalPages) {
+		if (end > start && end <= sequenceLength) {
 			pushSegment(start, end);
 			start = end;
 		}
 	}
-	if (start < totalPages) {
-		pushSegment(start, totalPages);
+	if (start < sequenceLength) {
+		pushSegment(start, sequenceLength);
 	}
 	return segments;
 }
 
 /**
- * Split a PDF into multiple documents at the given split points, omitting any
- * excluded pages from the output.
+ * Assemble one or more output PDFs by copying pages from multiple source PDFs
+ * into segments defined by sequence positions.
  *
- * @param pdfBytes - Original PDF file bytes
- * @param splitPoints - Sorted array of page indices *after* which to split (0-based).
- *                      e.g. [2, 5] splits after page 2 and after page 5.
- * @param excludedPages - 0-based page indices to omit from every segment.
- *                        Empty segments (those whose pages are all excluded)
- *                        are dropped from the output.
- * @returns Array of Uint8Array, one per non-empty segment
+ * @param sources - Map from sourceId to raw PDF bytes. Must contain every
+ *                  sourceId referenced by `sequence`.
+ * @param sequence - Combined, ordered list of page references. `sequence[k]`
+ *                   is the page at position `k`.
+ * @param splitPoints - Sorted array of sequence positions *after* which to
+ *                      split. e.g. [2, 5] splits after position 2 and 5.
+ * @param excludedPositions - Sequence positions to omit from every segment.
+ *                            Empty segments are dropped.
+ * @returns Array of Uint8Array, one per non-empty segment.
  */
-export async function splitPdf(
-	pdfBytes: Uint8Array,
-	splitPoints: number[],
-	excludedPages: number[] = [],
-): Promise<Uint8Array[]> {
-	const srcDoc = await PDFDocument.load(pdfBytes);
-	const totalPages = srcDoc.getPageCount();
-	const segments = computeSegmentPageIndices(
-		totalPages,
+export async function splitPdf(args: {
+	sources: Map<string, Uint8Array>;
+	sequence: SequenceEntry[];
+	splitPoints: number[];
+	excludedPositions?: number[];
+}): Promise<Uint8Array[]> {
+	const { sources, sequence, splitPoints, excludedPositions = [] } = args;
+	const segmentPositions = computeSegmentPositions(
+		sequence.length,
 		splitPoints,
-		excludedPages,
+		excludedPositions,
 	);
 
+	const loaded = new Map<string, PDFDocument>();
+	const ensureLoaded = async (id: string) => {
+		let doc = loaded.get(id);
+		if (!doc) {
+			doc = await PDFDocument.load(sources.get(id)!);
+			loaded.set(id, doc);
+		}
+		return doc;
+	};
+
 	const results: Uint8Array[] = [];
-	for (const indices of segments) {
+	for (const positions of segmentPositions) {
 		const newDoc = await PDFDocument.create();
-		const copiedPages = await newDoc.copyPages(srcDoc, indices);
-		for (const p of copiedPages) {
-			newDoc.addPage(p);
+		for (const k of positions) {
+			const entry = sequence[k];
+			const srcDoc = await ensureLoaded(entry.sourceId);
+			const [copied] = await newDoc.copyPages(srcDoc, [entry.pageIndex]);
+			newDoc.addPage(copied);
 		}
 		results.push(await newDoc.save());
 	}
