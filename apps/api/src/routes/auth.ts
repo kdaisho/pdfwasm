@@ -2,7 +2,12 @@ import { Hono } from "hono";
 import { eq, and, desc } from "drizzle-orm";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { db } from "../db/index.js";
-import { users, emailVerifications, userPreferences } from "../db/schema.js";
+import {
+	users,
+	emailVerifications,
+	userPreferences,
+	pdfDocuments,
+} from "../db/schema.js";
 import { generateOtp, hashOtp, verifyOtp } from "../lib/otp.js";
 import { generatePassphrase } from "../lib/passphrase.js";
 import { hashPassphrase, verifyPassphrase } from "../lib/passphrase-hash.js";
@@ -55,9 +60,11 @@ auth.get("/me", async (c) => {
 			id: users.id,
 			email: users.email,
 			lastPdfId: userPreferences.lastPdfId,
+			lastPdfFilename: pdfDocuments.filename,
 		})
 		.from(users)
 		.leftJoin(userPreferences, eq(users.id, userPreferences.userId))
+		.leftJoin(pdfDocuments, eq(userPreferences.lastPdfId, pdfDocuments.id))
 		.where(eq(users.id, userId))
 		.limit(1);
 
@@ -66,7 +73,12 @@ auth.get("/me", async (c) => {
 	}
 
 	return c.json({
-		user: { id: row.id, email: row.email, lastPdfId: row.lastPdfId },
+		user: {
+			id: row.id,
+			email: row.email,
+			lastPdfId: row.lastPdfId,
+			lastPdfFilename: row.lastPdfFilename,
+		},
 	});
 });
 
@@ -238,7 +250,14 @@ auth.post("/signup/complete", async (c) => {
 	setSessionCookie(c, sessionToken);
 
 	return c.json(
-		{ user: { id: user.id, email: user.email, lastPdfId: null } },
+		{
+			user: {
+				id: user.id,
+				email: user.email,
+				lastPdfId: null,
+				lastPdfFilename: null,
+			},
+		},
 		201,
 	);
 });
@@ -267,8 +286,12 @@ auth.post("/login", async (c) => {
 	}
 
 	const [prefs] = await db
-		.select({ lastPdfId: userPreferences.lastPdfId })
+		.select({
+			lastPdfId: userPreferences.lastPdfId,
+			lastPdfFilename: pdfDocuments.filename,
+		})
 		.from(userPreferences)
+		.leftJoin(pdfDocuments, eq(userPreferences.lastPdfId, pdfDocuments.id))
 		.where(eq(userPreferences.userId, user.id))
 		.limit(1);
 
@@ -280,6 +303,7 @@ auth.post("/login", async (c) => {
 			id: user.id,
 			email: user.email,
 			lastPdfId: prefs?.lastPdfId ?? null,
+			lastPdfFilename: prefs?.lastPdfFilename ?? null,
 		},
 	});
 });
@@ -472,8 +496,12 @@ auth.post("/reset/complete", async (c) => {
 		.where(eq(emailVerifications.id, record.id));
 
 	const [prefs] = await db
-		.select({ lastPdfId: userPreferences.lastPdfId })
+		.select({
+			lastPdfId: userPreferences.lastPdfId,
+			lastPdfFilename: pdfDocuments.filename,
+		})
 		.from(userPreferences)
+		.leftJoin(pdfDocuments, eq(userPreferences.lastPdfId, pdfDocuments.id))
 		.where(eq(userPreferences.userId, user.id))
 		.limit(1);
 
@@ -486,6 +514,7 @@ auth.post("/reset/complete", async (c) => {
 			id: user.id,
 			email: record.email,
 			lastPdfId: prefs?.lastPdfId ?? null,
+			lastPdfFilename: prefs?.lastPdfFilename ?? null,
 		},
 	});
 });

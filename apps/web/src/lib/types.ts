@@ -2,6 +2,7 @@ export interface AuthUser {
 	id: string;
 	email: string;
 	lastPdfId: string | null;
+	lastPdfFilename: string | null;
 }
 
 /** Per-character bounding box in PDF coordinate space (origin bottom-left, Y-up, units: points) */
