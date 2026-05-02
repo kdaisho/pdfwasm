@@ -23,6 +23,7 @@
 	let currentDoc: PDFiumDocument | null = $state(null);
 	let charExtractionId = 0;
 	let pdfBytes: Uint8Array | null = $state(null);
+	let pdfFilename: string | null = $state(null);
 	let splitMode = $state(false);
 	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
 	let uploadError: string | null = $state(null);
@@ -38,6 +39,7 @@
 
 			if (lastPdfBytes) {
 				uploadStatus = "saved";
+				pdfFilename = data.lastPdfFilename;
 				await loadPdfBytes(lastPdfBytes);
 			}
 		} catch (err: unknown) {
@@ -110,6 +112,7 @@
 		const buffer = await file.arrayBuffer();
 		const uint8 = new Uint8Array(buffer);
 
+		pdfFilename = file.name;
 		await loadPdfBytes(uint8);
 
 		if (auth.isAuthenticated) {
@@ -127,7 +130,7 @@
 		}
 	}
 
-	async function loadFromServer(id: string, _filename?: string) {
+	async function loadFromServer(id: string, filename?: string) {
 		if (!library) return;
 
 		uploadStatus = "idle";
@@ -135,6 +138,7 @@
 
 		try {
 			const uint8 = await downloadPdf(id);
+			pdfFilename = filename ?? null;
 			await loadPdfBytes(uint8);
 			uploadStatus = "saved";
 			setLastPdf(id).catch(() => {});
@@ -188,7 +192,13 @@
 		Failed to load PDFium: {libError.message}
 	</div>
 {:else if pages.length > 0 && currentDoc && pdfBytes}
-	<PdfViewer {pages} doc={currentDoc} {splitMode} {pdfBytes} />
+	<PdfViewer
+		{pages}
+		doc={currentDoc}
+		{splitMode}
+		{pdfBytes}
+		sourceFilename={pdfFilename}
+	/>
 {:else if !docLoading}
 	<div
 		class="flex items-center justify-center h-full text-lg text-surface-500"

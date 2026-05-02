@@ -10,8 +10,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
 	},
 	"dependencies": {
-		"@pdfwasm/shared": "workspace:*",
 		"@hyzyla/pdfium": "^2.1.9",
+		"@pdfwasm/shared": "workspace:*",
+		"jszip": "^3.10.1",
 		"pdf-lib": "^1.17.1"
 	},
 	"devDependencies": {

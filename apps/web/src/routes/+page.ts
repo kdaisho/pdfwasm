@@ -10,9 +10,11 @@ export const load: PageLoad = async ({ parent }) => {
 	// Kick off both in parallel — no waterfall
 	const libraryPromise = getPdfiumLibrary();
 	const lastPdfPromise = user?.lastPdfId ? downloadPdf(user.lastPdfId) : null;
+	const lastPdfFilename = user?.lastPdfFilename ?? null;
 
 	return {
 		libraryPromise,
 		lastPdfPromise,
+		lastPdfFilename,
 	};
 };

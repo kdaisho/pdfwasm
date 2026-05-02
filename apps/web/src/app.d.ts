@@ -7,6 +7,7 @@ declare global {
 				id: string;
 				email: string;
 				lastPdfId: string | null;
+				lastPdfFilename: string | null;
 			} | null;
 		}
 		// interface PageData {}

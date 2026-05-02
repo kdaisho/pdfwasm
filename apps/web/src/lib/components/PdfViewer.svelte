@@ -25,9 +25,10 @@
 		doc: PDFiumDocument;
 		splitMode: boolean;
 		pdfBytes: Uint8Array;
+		sourceFilename: string | null;
 	}
 
-	let { pages, doc, splitMode, pdfBytes }: Props = $props();
+	let { pages, doc, splitMode, pdfBytes, sourceFilename }: Props = $props();
 
 	const auth = getAuth();
 	let showAuthModal = $state(false);
@@ -42,6 +43,7 @@
 	let splitPoints: Set<number> = $state(new Set());
 	let deletedPages: Set<number> = $state(new Set());
 	let exporting = $state(false);
+	let exportError: string | null = $state(null);
 	let thumbnailWidth = $state(250);
 
 	interface SourcePdf {
@@ -349,6 +351,7 @@
 	async function doExport() {
 		if (!hasEdits || exporting || effectivePageCount === 0) return;
 		exporting = true;
+		exportError = null;
 		try {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local builder, not reactive state
 			const sourcesMap = new Map<string, Uint8Array>();
@@ -370,7 +373,9 @@
 				splitPoints: [...splitPoints],
 				excludedPositions: [...deletedPages],
 			});
-			downloadSplitPdfs(segments);
+			await downloadSplitPdfs(segments, sourceFilename);
+		} catch (err: unknown) {
+			exportError = err instanceof Error ? err.message : "Export failed";
 		} finally {
 			exporting = false;
 		}
@@ -552,6 +557,11 @@
 						? "Export PDFs"
 						: "Export PDF"}
 			</button>
+			{#if exportError}
+				<span class="text-sm font-medium text-error-500" role="alert">
+					Export failed: {exportError}
+				</span>
+			{/if}
 		</div>
 	{/if}
 
