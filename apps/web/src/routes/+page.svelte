@@ -27,6 +27,7 @@
 	let splitMode = $state(false);
 	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
 	let uploadError: string | null = $state(null);
+	let thumbnailWidth = $state(250);
 
 	// Both started in parallel by +page.ts load — just await them here
 	async function init() {
@@ -173,6 +174,11 @@
 			docLoading,
 			docError,
 			onDismissError: dismissDocError,
+			thumbnailWidth,
+			onThumbnailWidthChange: (value: number) => {
+				thumbnailWidth = value;
+			},
+			showZoom: pages.length > 0,
 		});
 	});
 
@@ -198,6 +204,7 @@
 		{splitMode}
 		{pdfBytes}
 		sourceFilename={pdfFilename}
+		{thumbnailWidth}
 	/>
 {:else if !docLoading}
 	<div
