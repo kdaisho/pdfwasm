@@ -171,6 +171,12 @@
 		combinedSequence.length - deletedPages.size,
 	);
 
+	let hasEdits = $derived(
+		splitPoints.size > 0 ||
+			deletedPages.size > 0 ||
+			insertedPages.length > 0,
+	);
+
 	let fileCount = $derived(
 		computeSegmentPositions(
 			combinedSequence.length,
@@ -341,8 +347,7 @@
 	}
 
 	async function doExport() {
-		if (splitPoints.size === 0 || exporting || effectivePageCount === 0)
-			return;
+		if (!hasEdits || exporting || effectivePageCount === 0) return;
 		exporting = true;
 		try {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local builder, not reactive state
@@ -372,8 +377,7 @@
 	}
 
 	function handleExport() {
-		if (splitPoints.size === 0 || exporting || effectivePageCount === 0)
-			return;
+		if (!hasEdits || exporting || effectivePageCount === 0) return;
 		if (auth.isAuthenticated) {
 			doExport();
 		} else {
@@ -515,31 +519,39 @@
 						: "s"}. (Esc to cancel.)
 				</span>
 			{/if}
-			{#if splitPoints.size > 0}
+			{#if splitPoints.size > 0 || deletedPages.size > 0}
 				<span class="text-sm text-warning-800-200">
-					{splitPoints.size} split point{splitPoints.size > 1
-						? "s"
-						: ""} &rarr; {fileCount} file{fileCount === 1
-						? ""
-						: "s"}{#if deletedPages.size > 0}
-						&middot; {deletedPages.size} excluded{/if}
+					{#if splitPoints.size > 0}
+						{splitPoints.size} split point{splitPoints.size > 1
+							? "s"
+							: ""} &rarr; {fileCount} file{fileCount === 1
+							? ""
+							: "s"}{#if deletedPages.size > 0}
+							&middot; {deletedPages.size} excluded{/if}
+					{:else}
+						{deletedPages.size} excluded
+					{/if}
 				</span>
-				{#if effectivePageCount === 0}
-					<span
-						class="text-sm font-medium text-warning-900-100"
-						role="alert"
-					>
-						All pages excluded — unmark a page to export.
-					</span>
-				{/if}
-				<button
-					class="btn btn-sm preset-filled-success-500"
-					onclick={handleExport}
-					disabled={exporting || effectivePageCount === 0}
-				>
-					{exporting ? "Exporting…" : "Export Split PDFs"}
-				</button>
 			{/if}
+			{#if hasEdits && effectivePageCount === 0}
+				<span
+					class="text-sm font-medium text-warning-900-100"
+					role="alert"
+				>
+					All pages excluded — unmark a page to export.
+				</span>
+			{/if}
+			<button
+				class="btn btn-sm preset-filled-success-500"
+				onclick={handleExport}
+				disabled={!hasEdits || exporting || effectivePageCount === 0}
+			>
+				{exporting
+					? "Exporting…"
+					: fileCount > 1
+						? "Export PDFs"
+						: "Export PDF"}
+			</button>
 		</div>
 	{/if}
 
