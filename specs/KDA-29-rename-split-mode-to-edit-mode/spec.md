@@ -21,12 +21,12 @@ A user editing a PDF (deleting pages or inserting pages from another PDF) must c
 
 ## Acceptance Criteria
 
-- [ ] Given a loaded PDF, when the user opens the sidebar, then the toggle button reads "Edit Mode" / "Exit Edit Mode" (no remaining "Split" copy in button labels, headings, tooltips, or the export button).
-- [ ] Given Edit mode with zero split points and zero edits, when the user views the export control, then it is disabled.
-- [ ] Given Edit mode with zero split points and at least one edit (deleted page, inserted page, or page count differing from the original), when the user clicks export, then a single PDF downloads reflecting those edits.
-- [ ] Given Edit mode with one or more split points (with or without other edits), when the user clicks export, then multiple PDFs download, each segment reflecting the edits.
-- [ ] Given Edit mode with edits applied, when the user toggles Edit mode off, then split points, deletions, and inserted-source state are cleared (existing behavior preserved).
-- [ ] Given Edit mode, when the user deletes or inserts pages, then the page grid updates immediately (no regression vs. current behavior).
+- [x] Given a loaded PDF, when the user opens the sidebar, then the toggle button reads "Edit Mode" / "Exit Edit Mode" (no remaining "Split" copy in button labels, headings, tooltips, or the export button).
+- [x] Given Edit mode with zero split points and zero edits, when the user views the export control, then it is disabled.
+- [x] Given Edit mode with zero split points and at least one edit (deleted page, inserted page, or page count differing from the original), when the user clicks export, then a single PDF downloads reflecting those edits.
+- [x] Given Edit mode with one or more split points (with or without other edits), when the user clicks export, then multiple PDFs download, each segment reflecting the edits.
+- [x] Given Edit mode with edits applied, when the user toggles Edit mode off, then split points, deletions, and inserted-source state are cleared (existing behavior preserved).
+- [x] Given Edit mode, when the user deletes or inserts pages, then the page grid updates immediately (no regression vs. current behavior).
 
 ## Out of Scope
 
