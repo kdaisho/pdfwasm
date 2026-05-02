@@ -5,29 +5,8 @@
 		{
 			"idx": 0,
 			"version": "7",
-			"when": 1772113361205,
-			"tag": "0000_zippy_black_cat",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1772200000000,
-			"tag": "0001_auth_revamp",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1772900000000,
-			"tag": "0002_user_preferences",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1775486707327,
-			"tag": "0003_reflective_pyro",
+			"when": 1777729505775,
+			"tag": "0000_safe_lilith",
 			"breakpoints": true
 		}
 	]

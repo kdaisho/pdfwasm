@@ -22,9 +22,17 @@ The typical loop:
 - Review the generated SQL (sometimes Drizzle gets ambiguous renames wrong)
 - `pnpm db:migrate` → applies it to Postgres
 
-This is also why `drizzle-kit drop` exists: if `generate` produced a file you don't want, `drop` removes it from `_journal.json` and deletes the SQL/snapshot — useful only **before** you've run `migrate`.
+#### Scripts
+
+| Script             | What it does                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm db:generate` | Diff `schema.ts` against the latest snapshot and write a new migration + snapshot. Does not touch the DB.                                                                             |
+| `pnpm db:migrate`  | Apply pending migrations to Postgres.                                                                                                                                                 |
+| `pnpm db:drop`     | Interactive picker (`drizzle-kit drop`) to remove an unapplied migration: deletes the SQL, the snapshot, and the journal entry. Does not touch the DB. Use only **before** `migrate`. |
+| `pnpm db:check`    | Validate migrations for collisions or corruption (`drizzle-kit check`). Cheap sanity check — run it if `meta/` looks wrong.                                                           |
+| `pnpm db:reset`    | Nuke the Docker volume, recreate the DB, and re-run all migrations. Local-only, destroys all data.                                                                                    |
 
 #### Rules
 
 1. **Always edit `schema.ts` and run `pnpm db:generate`.** Never hand-write migration SQL — it bypasses the snapshotting step and leaves `drizzle/meta/` out of sync with `drizzle/`.
-2. **If you need `drizzle-kit drop`, only drop the latest migration.** Dropping older migrations is unsafe because earlier snapshots may be missing or stale.
+2. **If you need `pnpm db:drop`, only drop the latest migration.** Dropping older migrations is unsafe because earlier snapshots may be missing or stale.

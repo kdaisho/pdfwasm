@@ -19,6 +19,8 @@
 		"prepare": "husky",
 		"db:generate": "pnpm --filter @api db:generate",
 		"db:migrate": "pnpm --filter @api db:migrate",
+		"db:drop": "pnpm --filter @api db:drop",
+		"db:check": "pnpm --filter @api db:check",
 		"db:reset": "docker compose down && docker volume rm pdfwasm_pg_data && docker compose up -d && sleep 2 && pnpm run db:migrate"
 	},
 	"lint-staged": {

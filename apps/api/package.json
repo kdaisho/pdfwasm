@@ -9,6 +9,8 @@
 		"start": "node dist/index.js",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
+		"db:drop": "drizzle-kit drop",
+		"db:check": "drizzle-kit check",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
 	},
