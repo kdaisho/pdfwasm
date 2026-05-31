@@ -26,5 +26,8 @@ Thumbs.db
 .vscode
 .idea
 
+# Claude Code runtime
+.claude/*.lock
+
 # Misc
 .netlify

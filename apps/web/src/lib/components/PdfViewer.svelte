@@ -26,9 +26,17 @@
 		splitMode: boolean;
 		pdfBytes: Uint8Array;
 		sourceFilename: string | null;
+		thumbnailWidth: number;
 	}
 
-	let { pages, doc, splitMode, pdfBytes, sourceFilename }: Props = $props();
+	let {
+		pages,
+		doc,
+		splitMode,
+		pdfBytes,
+		sourceFilename,
+		thumbnailWidth,
+	}: Props = $props();
 
 	const auth = getAuth();
 	let showAuthModal = $state(false);
@@ -44,7 +52,6 @@
 	let deletedPages: Set<number> = $state(new Set());
 	let exporting = $state(false);
 	let exportError: string | null = $state(null);
-	let thumbnailWidth = $state(250);
 
 	interface SourcePdf {
 		id: string;
@@ -492,96 +499,115 @@
 	{/if}
 
 	{#if splitMode}
-		<div
-			class="flex items-center justify-center gap-3 px-4 py-2 bg-warning-100-900 border-b border-warning-400-600"
-		>
-			<label
-				class="flex items-center gap-1.5 text-sm text-warning-800-200"
+		<div class="sticky top-4 z-10 flex justify-center pointer-events-none">
+			<div
+				class="flex items-center gap-2.5 bg-white rounded-[14px] px-3.5 py-[7px] pointer-events-auto"
+				style="box-shadow: 0 2px 16px rgba(99,102,241,0.12), 0 0 0 1px rgba(99,102,241,0.1)"
 			>
-				Size
-				<input
-					type="range"
-					min="100"
-					max="800"
-					step="50"
-					bind:value={thumbnailWidth}
-					class="w-[100px] cursor-pointer"
-				/>
-			</label>
-			<button
-				class="btn btn-sm preset-tonal-primary"
-				onclick={() => (insertModalOpen = true)}
-				disabled={awaitingAnchor}
-			>
-				Insert pages
-			</button>
-			{#if awaitingAnchor && pendingInsert}
-				<span class="text-sm text-warning-900-100" role="status">
-					Click a gutter to insert {pendingInsert.selectedPageIndices
-						.length} page{pendingInsert.selectedPageIndices
-						.length === 1
-						? ""
-						: "s"}. (Esc to cancel.)
-				</span>
-			{/if}
-			{#if splitPoints.size > 0 || deletedPages.size > 0}
-				<span class="text-sm text-warning-800-200">
-					{#if splitPoints.size > 0}
-						{splitPoints.size} split point{splitPoints.size > 1
-							? "s"
-							: ""} &rarr; {fileCount} file{fileCount === 1
-							? ""
-							: "s"}{#if deletedPages.size > 0}
-							&middot; {deletedPages.size} excluded{/if}
-					{:else}
-						{deletedPages.size} excluded
-					{/if}
-				</span>
-			{/if}
-			{#if hasEdits && effectivePageCount === 0}
-				<span
-					class="text-sm font-medium text-warning-900-100"
-					role="alert"
+				<div class="flex items-center gap-1.5">
+					<span
+						class="w-[7px] h-[7px] rounded-full bg-[#6366f1]"
+						style="box-shadow: 0 0 0 3px rgba(99,102,241,0.2)"
+					></span>
+					<span class="text-[12px] text-[#6366f1] font-semibold"
+						>Edit Mode</span
+					>
+				</div>
+
+				<div class="w-px h-5 bg-[#f0eeec]"></div>
+
+				<button
+					class="px-3 py-[5px] rounded-lg border border-[#e7e5e4] bg-white text-[#44403c] text-[12px] font-medium hover:bg-[#fafaf9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+					onclick={() => (insertModalOpen = true)}
+					disabled={awaitingAnchor}
 				>
-					All pages excluded — unmark a page to export.
-				</span>
-			{/if}
-			<button
-				class="btn btn-sm preset-filled-success-500"
-				onclick={handleExport}
-				disabled={!hasEdits || exporting || effectivePageCount === 0}
-			>
-				{exporting
-					? "Exporting…"
-					: fileCount > 1
-						? "Export PDFs"
-						: "Export PDF"}
-			</button>
-			{#if exportError}
-				<span class="text-sm font-medium text-error-500" role="alert">
-					Export failed: {exportError}
-				</span>
-			{/if}
+					+ Insert Pages
+				</button>
+
+				<button
+					class="px-3.5 py-[5px] rounded-lg border-none text-white text-[12px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+					style="background: linear-gradient(135deg, #6366f1, #818cf8)"
+					onclick={handleExport}
+					disabled={!hasEdits ||
+						exporting ||
+						effectivePageCount === 0}
+				>
+					{exporting
+						? "Exporting…"
+						: fileCount > 1
+							? "↓ Export PDFs"
+							: "↓ Export PDF"}
+				</button>
+
+				{#if awaitingAnchor && pendingInsert}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span class="text-[12px] text-[#78716c]" role="status">
+						Click a gutter to insert {pendingInsert
+							.selectedPageIndices.length} page{pendingInsert
+							.selectedPageIndices.length === 1
+							? ""
+							: "s"} — Esc to cancel
+					</span>
+				{/if}
+
+				{#if splitPoints.size > 0 || deletedPages.size > 0}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span class="text-[11px] text-[#a8a29e]">
+						{#if splitPoints.size > 0}
+							{splitPoints.size} split → {fileCount} file{fileCount ===
+							1
+								? ""
+								: "s"}
+						{/if}
+						{#if deletedPages.size > 0}
+							{splitPoints.size > 0
+								? " · "
+								: ""}{deletedPages.size}
+							excluded
+						{/if}
+					</span>
+				{/if}
+
+				{#if hasEdits && effectivePageCount === 0}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span
+						class="text-[12px] text-[#ef4444] font-medium"
+						role="alert"
+					>
+						All pages excluded
+					</span>
+				{/if}
+
+				{#if exportError}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span
+						class="text-[12px] text-[#ef4444] font-medium"
+						role="alert"
+					>
+						Export failed: {exportError}
+					</span>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
 	<div
-		class="flex gap-4 p-4 overflow-x-auto {splitMode
-			? 'flex-row flex-wrap items-stretch mx-auto gap-y-8 gap-x-0'
-			: 'flex-col items-center'}"
+		class="flex gap-4 p-7 {splitMode
+			? 'flex-row flex-wrap items-start mx-auto gap-y-5 gap-x-0 justify-center'
+			: 'flex-col items-center overflow-x-auto'}"
 	>
 		{#if splitMode && awaitingAnchor}
 			<button
-				class="flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-4 relative"
+				class="flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-2 relative self-stretch"
 				onclick={() => commitInsertAt(0)}
 				title="Insert here (before page 1)"
 				aria-label="Insert pages before page 1"
 			>
 				<span
-					class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-primary-500 opacity-80"
+					class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-[#6366f1] opacity-80"
 				></span>
 				<span
-					class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow bg-primary-500 text-white"
+					class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-[#6366f1] text-white"
 					>+</span
 				>
 			</button>
@@ -600,23 +626,22 @@
 					: -1}
 			{@const gIdx = pageGroupMap.get(position) ?? 0}
 			<div
-				class="group relative flex flex-col items-center rounded-lg p-2 -m-1 transition-opacity"
-				class:opacity-40={splitMode && deletedPages.has(position)}
+				class="group relative flex flex-col items-center p-2 mx-1 transition-all"
 				style="{splitMode
 					? `width: ${thumbnailWidth}px`
 					: ''}{splitMode && groupCount > 1
-					? `; background: ${groupColors[gIdx % groupColors.length]}15`
+					? `; background: ${groupColors[gIdx % groupColors.length]}15; border-radius: 6px`
 					: ''}"
 				use:trackPageRef={ref.kind === "original" ? ref.index : -1}
 			>
 				{#if splitMode}
 					<button
 						type="button"
-						class="absolute top-1 right-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-surface-50 text-base leading-none text-surface-700 shadow transition-opacity duration-150 hover:bg-surface-200 {deletedPages.has(
+						class="absolute top-1.5 right-1.5 z-10 w-[28px] h-[28px] rounded-full border-none flex items-center justify-center text-white shadow-md transition-all duration-150 cursor-pointer {deletedPages.has(
 							position,
 						)
-							? 'opacity-100'
-							: 'opacity-0 group-hover:opacity-100'}"
+							? 'opacity-100 bg-[#22c55e]'
+							: 'opacity-0 group-hover:opacity-100 bg-[#ef4444]'}"
 						onclick={() => toggleDeletedPage(position)}
 						title={deletedPages.has(position)
 							? `Include page ${position + 1}`
@@ -625,7 +650,45 @@
 							? `Include page ${position + 1}`
 							: `Exclude page ${position + 1}`}
 					>
-						&times;
+						{#if deletedPages.has(position)}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 14 14"
+								fill="none"
+								aria-hidden="true"
+							>
+								<path
+									d="M3 5h6a2.5 2.5 0 0 1 0 5H6"
+									stroke="currentColor"
+									stroke-width="1.6"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+								<path
+									d="M5 3 3 5l2 2"
+									stroke="currentColor"
+									stroke-width="1.6"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						{:else}
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 12 12"
+								fill="none"
+								aria-hidden="true"
+							>
+								<path
+									d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+								/>
+							</svg>
+						{/if}
 					</button>
 				{/if}
 				{#if splitMode && ref.kind === "inserted"}
@@ -650,8 +713,12 @@
 					</div>
 				{/if}
 				<div
-					class="w-full {splitMode ? 'flex justify-center' : ''}"
+					class="w-full {splitMode
+						? 'flex justify-center page-card'
+						: ''}"
 					class:thumbnail={splitMode}
+					class:page-card-deleted={splitMode &&
+						deletedPages.has(position)}
 					style="--page-aspect-padding: {(page.height / page.width) *
 						100}%"
 				>
@@ -664,8 +731,11 @@
 				</div>
 				{#if splitMode}
 					<div
-						class="text-xs text-surface-500 mt-3"
-						class:line-through={deletedPages.has(position)}
+						class="text-[11px] mt-1.5 font-mono {deletedPages.has(
+							position,
+						)
+							? 'line-through text-[#fca5a5]'
+							: 'text-[#a8a29e]'}"
 					>
 						{position + 1}
 					</div>
@@ -673,39 +743,38 @@
 			</div>
 			{#if splitMode && awaitingAnchor}
 				<button
-					class="group flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-4 relative"
+					class="group flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-2 relative self-stretch"
 					onclick={() => commitInsertAt(position + 1)}
 					title="Insert here (after page {position + 1})"
 					aria-label="Insert pages after page {position + 1}"
 				>
 					<span
-						class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-primary-500 opacity-80"
+						class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-[#6366f1] opacity-80"
 					></span>
 					<span
-						class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow bg-primary-500 text-white"
+						class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-[#6366f1] text-white"
 						>+</span
 					>
 				</button>
 			{:else if splitMode && position < combinedSequence.length - 1}
 				<button
-					class="group flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-4 relative"
-					class:split-active={splitPoints.has(position)}
+					class="group flex flex-col items-center justify-center w-9 border-none bg-transparent cursor-pointer px-4 mx-2 relative self-stretch"
 					onclick={() => toggleSplitPoint(position)}
 					title="Split after page {position + 1}"
 				>
 					<span
-						class="w-0 h-full min-h-[40px] border-l-2 border-dashed opacity-50 transition-opacity duration-150 {splitPoints.has(
+						class="w-0 h-full min-h-[40px] border-l-2 transition-all duration-150 {splitPoints.has(
 							position,
 						)
-							? 'border-solid! border-primary-600 opacity-100!'
-							: 'border-surface-300 group-hover:border-primary-500 group-hover:opacity-100'}"
+							? 'border-solid border-[#6366f1] opacity-100'
+							: 'border-dashed border-[#ddd6fe] opacity-80 group-hover:border-[#6366f1] group-hover:opacity-100'}"
 					></span>
 					<span
-						class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow transition-[color,background-color,box-shadow] duration-150 bg-surface-50 {splitPoints.has(
+						class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center transition-all duration-150 {splitPoints.has(
 							position,
 						)
-							? 'bg-primary-600! text-white shadow-[0_1px_6px_rgba(79,110,247,0.5)]'
-							: 'text-surface-400 shadow-[0_1px_4px_rgba(0,0,0,0.15)] group-hover:text-primary-500 group-hover:shadow-[0_1px_4px_rgba(79,110,247,0.3)]'}"
+							? 'bg-[#6366f1] text-white shadow-[0_1px_6px_rgba(99,102,241,0.5)]'
+							: 'bg-white text-[#a8a29e] shadow-[0_1px_4px_rgba(0,0,0,0.1)] group-hover:text-[#6366f1] group-hover:shadow-[0_1px_4px_rgba(99,102,241,0.3)]'}"
 						>&#9986;</span
 					>
 				</button>
@@ -745,5 +814,49 @@
 		left: 0;
 		width: 100% !important;
 		height: 100% !important;
+	}
+
+	.page-card {
+		background: white;
+		border: 1px solid #f0eeec;
+		border-radius: 6px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+		overflow: hidden;
+		transition: all 0.15s;
+	}
+
+	.group:hover .page-card:not(.page-card-deleted) {
+		border-color: #c4b5fd;
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+	}
+
+	.page-card-deleted {
+		position: relative;
+		border-color: #fecaca;
+	}
+
+	.page-card-deleted::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: rgba(254, 226, 226, 0.55);
+		pointer-events: none;
+		z-index: 4;
+	}
+
+	.page-card-deleted::after {
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 12%;
+		width: 76%;
+		height: 2px;
+		background: #ef4444;
+		border-radius: 1px;
+		transform: translateY(-50%) rotate(-22deg);
+		transform-origin: center;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+		pointer-events: none;
+		z-index: 5;
 	}
 </style>

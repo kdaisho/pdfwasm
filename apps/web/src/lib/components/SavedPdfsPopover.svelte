@@ -59,7 +59,55 @@
 	}}
 >
 	<Popover.Trigger>
-		<button class="btn preset-outlined text-sm">My PDFs</button>
+		<button
+			class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg bg-transparent border-none text-[#78716c] text-[13px] font-medium hover:bg-[#f0eeec] transition-colors cursor-pointer"
+		>
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 14 14"
+				fill="none"
+				aria-hidden="true"
+			>
+				<rect
+					x="2"
+					y="2"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="8"
+					y="2"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="2"
+					y="8"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="8"
+					y="8"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+			</svg>
+			My PDFs
+		</button>
 	</Popover.Trigger>
 	<Popover.Positioner class="z-50">
 		<Popover.Content
