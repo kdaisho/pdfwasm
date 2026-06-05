@@ -238,13 +238,23 @@
 		}
 		const charYInPage =
 			(page.originalHeight - char.top) * page.scale * zoomScale;
+
+		// The layout scrolls inside <main> (overflow-y-auto), not the window —
+		// the whole app is h-screen, so window.scrollY never moves. Center the
+		// match within the actual scroll container.
+		const scroller = pageEl.closest("main");
+		if (!scroller) {
+			pageEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			return;
+		}
 		const pageRect = pageEl.getBoundingClientRect();
+		const scrollerRect = scroller.getBoundingClientRect();
 		const targetY =
-			window.scrollY +
-			pageRect.top +
+			scroller.scrollTop +
+			(pageRect.top - scrollerRect.top) +
 			charYInPage -
-			window.innerHeight / 2;
-		window.scrollTo({ top: targetY, behavior: "smooth" });
+			scroller.clientHeight / 2;
+		scroller.scrollTo({ top: targetY, behavior: "smooth" });
 	});
 
 	// Clear split points, exclusions, and inserted-source state when exiting split mode.
