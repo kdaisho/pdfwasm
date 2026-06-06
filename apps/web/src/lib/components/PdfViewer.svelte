@@ -575,12 +575,12 @@
 		};
 	}
 
-	interface WheelZoomParams {
-		getWidth: () => number;
-		onChange: (value: number) => void;
-	}
-
-	function wheelZoom(node: HTMLElement, params: WheelZoomParams) {
+	// Cmd/Ctrl + wheel to zoom. Listen on window rather than a DOM node: the
+	// content can be shorter than the scroll viewport, so wheel events over the
+	// empty area never bubble to the viewer element. Explicit { passive: false }
+	// keeps preventDefault working (root-target wheel listeners are passive by
+	// default).
+	$effect(() => {
 		function onWheel(e: WheelEvent) {
 			if (!e.metaKey && !e.ctrlKey) return;
 			if (isEditableTarget(e)) return;
@@ -589,31 +589,18 @@
 			e.preventDefault();
 
 			const direction = e.deltaY < 0 ? 1 : -1;
-			const next = stepZoomWidth(params.getWidth(), direction);
-			if (next !== params.getWidth()) params.onChange(next);
+			const next = stepZoomWidth(thumbnailWidth, direction);
+			if (next !== thumbnailWidth) onThumbnailWidthChange(next);
 		}
 
-		node.addEventListener("wheel", onWheel, { passive: false });
-
-		return {
-			update(nextParams: WheelZoomParams) {
-				params = nextParams;
-			},
-			destroy() {
-				node.removeEventListener("wheel", onWheel);
-			},
-		};
-	}
+		window.addEventListener("wheel", onWheel, { passive: false });
+		return () => window.removeEventListener("wheel", onWheel);
+	});
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div
-	use:wheelZoom={{
-		getWidth: () => thumbnailWidth,
-		onChange: onThumbnailWidthChange,
-	}}
->
+<div>
 	{#if searchOpen}
 		<SearchBar
 			bind:inputElement={searchInput}
