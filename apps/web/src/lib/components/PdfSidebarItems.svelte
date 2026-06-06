@@ -1,4 +1,10 @@
 <script lang="ts">
+	import {
+		ZOOM_BASE_WIDTH,
+		ZOOM_MAX_WIDTH,
+		ZOOM_MIN_WIDTH,
+		ZOOM_STEP,
+	} from "$lib/constants/zoom";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import SavedPdfsPopover from "./SavedPdfsPopover.svelte";
 
@@ -125,14 +131,14 @@
 				>Zoom</span
 			>
 			<span class="text-[12px] text-[#78716c] font-mono"
-				>{Math.round((thumbnailWidth / 250) * 100)}%</span
+				>{Math.round((thumbnailWidth / ZOOM_BASE_WIDTH) * 100)}%</span
 			>
 		</div>
 		<input
 			type="range"
-			min="100"
-			max="800"
-			step="50"
+			min={ZOOM_MIN_WIDTH}
+			max={ZOOM_MAX_WIDTH}
+			step={ZOOM_STEP}
 			value={thumbnailWidth}
 			oninput={(e) =>
 				onThumbnailWidthChange(+(e.target as HTMLInputElement).value)}

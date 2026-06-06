@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from "svelte";
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
+	import { ZOOM_BASE_WIDTH, stepZoomWidth } from "$lib/constants/zoom";
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
 	import { RENDER_SCALE } from "$lib/services/charBoxes";
@@ -27,6 +28,7 @@
 		pdfBytes: Uint8Array;
 		sourceFilename: string | null;
 		thumbnailWidth: number;
+		onThumbnailWidthChange: (value: number) => void;
 	}
 
 	let {
@@ -36,6 +38,7 @@
 		pdfBytes,
 		sourceFilename,
 		thumbnailWidth,
+		onThumbnailWidthChange,
 	}: Props = $props();
 
 	const auth = getAuth();
@@ -64,8 +67,8 @@
 	);
 
 	// In normal (non-edit) mode the zoom slider scales the page relative to its
-	// natural render size: 250 → 1× (the historical default), so 100% is unchanged.
-	let zoomScale = $derived(thumbnailWidth / 250);
+	// natural render size: ZOOM_BASE_WIDTH → 1×, so 100% is unchanged.
+	let zoomScale = $derived(thumbnailWidth / ZOOM_BASE_WIDTH);
 
 	interface SourcePdf {
 		id: string;
@@ -571,11 +574,46 @@
 			},
 		};
 	}
+
+	interface WheelZoomParams {
+		getWidth: () => number;
+		onChange: (value: number) => void;
+	}
+
+	function wheelZoom(node: HTMLElement, params: WheelZoomParams) {
+		function onWheel(e: WheelEvent) {
+			if (!e.metaKey && !e.ctrlKey) return;
+			if (isEditableTarget(e)) return;
+			if (e.deltaY === 0) return;
+
+			e.preventDefault();
+
+			const direction = e.deltaY < 0 ? 1 : -1;
+			const next = stepZoomWidth(params.getWidth(), direction);
+			if (next !== params.getWidth()) params.onChange(next);
+		}
+
+		node.addEventListener("wheel", onWheel, { passive: false });
+
+		return {
+			update(nextParams: WheelZoomParams) {
+				params = nextParams;
+			},
+			destroy() {
+				node.removeEventListener("wheel", onWheel);
+			},
+		};
+	}
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
 
-<div>
+<div
+	use:wheelZoom={{
+		getWidth: () => thumbnailWidth,
+		onChange: onThumbnailWidthChange,
+	}}
+>
 	{#if searchOpen}
 		<SearchBar
 			bind:inputElement={searchInput}
