@@ -76,7 +76,11 @@ export async function splitPdf(args: {
 	const ensureLoaded = async (id: string) => {
 		let doc = loaded.get(id);
 		if (!doc) {
-			doc = await PDFDocument.load(sources.get(id)!);
+			// Encrypted sources are decrypted upstream (see normalizePdfBytes);
+			// ignoreEncryption is a harmless safety net for permissions-only docs.
+			doc = await PDFDocument.load(sources.get(id)!, {
+				ignoreEncryption: true,
+			});
 			loaded.set(id, doc);
 		}
 		return doc;

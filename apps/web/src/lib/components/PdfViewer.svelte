@@ -6,6 +6,7 @@
 	import { findMatches } from "$lib/services/search";
 	import { RENDER_SCALE } from "$lib/services/charBoxes";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
+	import { normalizePdfBytes } from "$lib/services/decryptPdf";
 	import {
 		splitPdf,
 		downloadSplitPdfs,
@@ -443,9 +444,18 @@
 		exporting = true;
 		exportError = null;
 		try {
+			// Reject encrypted sources up front (naming the culprit); pdf-lib
+			// can't decrypt and would otherwise emit garbled pages.
 			const sourcesMap = new SvelteMap<string, Uint8Array>();
-			sourcesMap.set("primary", pdfBytes);
-			for (const s of sources) sourcesMap.set(s.id, s.bytes);
+			sourcesMap.set(
+				"primary",
+				await normalizePdfBytes(
+					pdfBytes,
+					sourceFilename ?? "the main document",
+				),
+			);
+			for (const s of sources)
+				sourcesMap.set(s.id, await normalizePdfBytes(s.bytes, s.name));
 
 			const sequence: SequenceEntry[] = combinedSequence.map((ref) =>
 				ref.kind === "original"
@@ -835,7 +845,7 @@
 							sourceById.get(ref.sourceId)?.name ?? ""}
 						{@const badgeLabel = sourceName.replace(/\.pdf$/i, "")}
 						<span
-							class="absolute top-1 left-1 z-10 max-w-[10rem] truncate rounded-full bg-primary-500 px-2 py-0.5 text-xs font-medium text-white shadow"
+							class="absolute top-1 left-1 z-10 max-w-40 truncate rounded-full bg-primary-500 px-2 py-0.5 text-xs font-medium text-white shadow"
 							title={sourceName}
 						>
 							{badgeLabel}
