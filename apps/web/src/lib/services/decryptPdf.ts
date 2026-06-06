@@ -26,6 +26,17 @@ export class EncryptedSourceError extends Error {
 }
 
 /**
+ * Whether a PDF carries an encryption dictionary. PDFium still renders these
+ * (empty-password docs decrypt transparently), but pdf-lib can't export them —
+ * use this to warn the user at ingestion. `ignoreEncryption` lets the probe
+ * load without throwing; we only read the flag.
+ */
+export async function isPdfEncrypted(bytes: Uint8Array): Promise<boolean> {
+	const probe = await PDFDocument.load(bytes, { ignoreEncryption: true });
+	return probe.isEncrypted;
+}
+
+/**
  * Return export-safe bytes for a source PDF. Throws {@link EncryptedSourceError}
  * (naming `label`) if the document is encrypted; otherwise returns the original
  * bytes unchanged. `label` should identify the file to the user (e.g. its name).
@@ -34,7 +45,6 @@ export async function normalizePdfBytes(
 	bytes: Uint8Array,
 	label: string,
 ): Promise<Uint8Array> {
-	const probe = await PDFDocument.load(bytes, { ignoreEncryption: true });
-	if (probe.isEncrypted) throw new EncryptedSourceError(label);
+	if (await isPdfEncrypted(bytes)) throw new EncryptedSourceError(label);
 	return bytes;
 }

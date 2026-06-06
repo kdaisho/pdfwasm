@@ -2,6 +2,7 @@
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
 	import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
+	import { isPdfEncrypted } from "$lib/services/decryptPdf";
 	import { SvelteSet } from "svelte/reactivity";
 
 	export interface ConfirmPayload {
@@ -9,6 +10,7 @@
 		sourceBytes: Uint8Array;
 		sourcePageCount: number;
 		selectedPageIndices: number[];
+		encrypted: boolean;
 	}
 
 	interface Props {
@@ -30,6 +32,8 @@
 	let sourcePageCount = $state(0);
 	let selectedPageIndices = new SvelteSet<number>();
 	let errorMessage = $state("");
+	// Encrypted sources render fine but can't be exported; warn, don't block.
+	let encrypted = $state(false);
 
 	function destroySourceDoc() {
 		if (sourceDoc) {
@@ -50,6 +54,7 @@
 		sourcePageCount = 0;
 		selectedPageIndices.clear();
 		errorMessage = "";
+		encrypted = false;
 	}
 
 	// Reset whenever the modal closes, regardless of reason.
@@ -79,6 +84,9 @@
 			sourceBytes = bytes;
 			sourceDoc = doc;
 			sourcePageCount = doc.getPageCount();
+			encrypted = await isPdfEncrypted(bytes);
+			// A single-page PDF has only one possible choice — pre-select it.
+			if (sourcePageCount === 1) selectedPageIndices.add(0);
 			phase = "select";
 		} catch {
 			errorMessage =
@@ -94,6 +102,7 @@
 		sourcePageCount = 0;
 		selectedPageIndices.clear();
 		errorMessage = "";
+		encrypted = false;
 		phase = "idle";
 	}
 
@@ -110,6 +119,7 @@
 			sourceBytes,
 			sourcePageCount,
 			selectedPageIndices: [...selectedPageIndices].sort((a, b) => a - b),
+			encrypted,
 		};
 		destroySourceDoc();
 		onconfirm(payload);
@@ -250,6 +260,22 @@
 					</div>
 				{:else if phase === "select"}
 					<div class="space-y-4">
+						{#if encrypted}
+							<div
+								class="p-3 rounded-lg bg-warning-100-900 border border-warning-400-600"
+								role="alert"
+							>
+								<p class="text-sm text-warning-800-200">
+									<span class="font-semibold"
+										>{pickedFile?.name}</span
+									> is encrypted. You can insert its pages, but
+									the export will fail until you replace it with
+									an unencrypted copy — open it in another app (e.g.
+									Preview → File → Export), re-save without encryption,
+									then insert that copy instead.
+								</p>
+							</div>
+						{/if}
 						<p class="text-sm text-surface-500">
 							Click pages to select. {selectedPageIndices.size} of
 							{sourcePageCount} selected.
