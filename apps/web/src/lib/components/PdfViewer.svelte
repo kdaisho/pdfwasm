@@ -48,8 +48,8 @@
 	let caseSensitive = $state(false);
 	let wholeWord = $state(false);
 	let currentMatchIndex = $state(-1);
-	let splitPoints: Set<number> = $state(new Set());
-	let deletedPages: Set<number> = $state(new Set());
+	let splitPoints = new SvelteSet<number>();
+	let deletedPages = new SvelteSet<number>();
 	let exporting = $state(false);
 	let exportError: string | null = $state(null);
 
@@ -94,8 +94,7 @@
 		originalPages: PageData[],
 		inserts: InsertedPage[],
 	): PageRef[] {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway map, not reactive state
-		const byAnchor = new Map<number, InsertedPage[]>();
+		const byAnchor = new SvelteMap<number, InsertedPage[]>();
 		for (const ins of inserts) {
 			const list = byAnchor.get(ins.insertionAnchor);
 			if (list) list.push(ins);
@@ -144,8 +143,7 @@
 	];
 
 	let searchInput: HTMLInputElement | undefined = $state();
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state, tracks DOM refs imperatively via bind:this
-	let pageElements = new Map<number, HTMLDivElement>();
+	let pageElements = new SvelteMap<number, HTMLDivElement>();
 
 	$effect(() => {
 		const q = query;
@@ -167,7 +165,7 @@
 		buildSequence(pages, insertedPages),
 	);
 
-	let sourceById = $derived(new SvelteMap(sources.map((s) => [s.id, s])));
+	let sourceById = $derived(new Map(sources.map((s) => [s.id, s])));
 
 	let awaitingAnchor = $derived(pendingInsert !== null);
 
@@ -271,8 +269,8 @@
 					/* noop */
 				}
 			}
-			splitPoints = new Set();
-			deletedPages = new Set();
+			splitPoints.clear();
+			deletedPages.clear();
 			sources = [];
 			insertedPages = [];
 			pendingInsert = null;
@@ -344,16 +342,17 @@
 		);
 
 		// Rebase existing splitPoints / deletedPages: any k >= position shifts by +n.
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway, reassigned below
-		const nextSplits = new Set<number>();
-		for (const k of splitPoints) nextSplits.add(k >= position ? k + n : k);
-		splitPoints = nextSplits;
+		const rebasedSplits = [...splitPoints].map((k) =>
+			k >= position ? k + n : k,
+		);
+		splitPoints.clear();
+		for (const k of rebasedSplits) splitPoints.add(k);
 
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway, reassigned below
-		const nextDeleted = new Set<number>();
-		for (const k of deletedPages)
-			nextDeleted.add(k >= position ? k + n : k);
-		deletedPages = nextDeleted;
+		const rebasedDeleted = [...deletedPages].map((k) =>
+			k >= position ? k + n : k,
+		);
+		deletedPages.clear();
+		for (const k of rebasedDeleted) deletedPages.add(k);
 
 		insertedPages = [...insertedPages, ...batch];
 		pendingInsert = null;
@@ -362,14 +361,11 @@
 	}
 
 	function toggleSplitPoint(position: number) {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway copy, not reactive state
-		const next = new Set(splitPoints);
-		if (next.has(position)) {
-			next.delete(position);
+		if (splitPoints.has(position)) {
+			splitPoints.delete(position);
 		} else {
-			next.add(position);
+			splitPoints.add(position);
 		}
-		splitPoints = next;
 	}
 
 	function toggleDeletedPage(position: number) {
@@ -379,14 +375,11 @@
 			selectedPositions.has(position) && selectedPositions.size > 1
 				? [...selectedPositions]
 				: [position];
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway copy, not reactive state
-		const next = new Set(deletedPages);
-		const allExcluded = targets.every((p) => next.has(p));
+		const allExcluded = targets.every((p) => deletedPages.has(p));
 		for (const p of targets) {
-			if (allExcluded) next.delete(p);
-			else next.add(p);
+			if (allExcluded) deletedPages.delete(p);
+			else deletedPages.add(p);
 		}
-		deletedPages = next;
 	}
 
 	function isEditableTarget(e: Event): boolean {
@@ -438,10 +431,7 @@
 
 	function excludeSelected() {
 		if (selectedToExclude.length === 0) return;
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway copy, not reactive state
-		const next = new Set(deletedPages);
-		for (const p of selectedToExclude) next.add(p);
-		deletedPages = next;
+		for (const p of selectedToExclude) deletedPages.add(p);
 		// Keep the selection so undoing a marker re-surfaces the button.
 	}
 
@@ -450,8 +440,7 @@
 		exporting = true;
 		exportError = null;
 		try {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local builder, not reactive state
-			const sourcesMap = new Map<string, Uint8Array>();
+			const sourcesMap = new SvelteMap<string, Uint8Array>();
 			sourcesMap.set("primary", pdfBytes);
 			for (const s of sources) sourcesMap.set(s.id, s.bytes);
 
@@ -843,7 +832,7 @@
 						class="thumbnail {splitMode
 							? 'w-full flex justify-center page-card cursor-pointer'
 							: ''} {splitMode && selectedPositions.has(position)
-							? 'outline outline-2 outline-offset-2 outline-[#6366f1]'
+							? 'outline-2 outline-offset-2 outline-[#6366f1]'
 							: ''}"
 						class:page-card-deleted={splitMode &&
 							deletedPages.has(position)}

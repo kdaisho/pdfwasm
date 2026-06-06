@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
+	import { Dialog, Portal } from "@skeletonlabs/skeleton-svelte";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
+	import { SvelteSet } from "svelte/reactivity";
 
 	export interface ConfirmPayload {
 		sourceName: string;
@@ -27,7 +28,7 @@
 	let sourceBytes: Uint8Array | null = $state(null);
 	let sourceDoc: PDFiumDocument | null = $state(null);
 	let sourcePageCount = $state(0);
-	let selectedPageIndices: Set<number> = $state(new Set());
+	let selectedPageIndices = new SvelteSet<number>();
 	let errorMessage = $state("");
 
 	function destroySourceDoc() {
@@ -47,7 +48,7 @@
 		pickedFile = null;
 		sourceBytes = null;
 		sourcePageCount = 0;
-		selectedPageIndices = new Set();
+		selectedPageIndices.clear();
 		errorMessage = "";
 	}
 
@@ -91,17 +92,14 @@
 		pickedFile = null;
 		sourceBytes = null;
 		sourcePageCount = 0;
-		selectedPageIndices = new Set();
+		selectedPageIndices.clear();
 		errorMessage = "";
 		phase = "idle";
 	}
 
 	function togglePage(i: number) {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local throwaway, reassigned below
-		const next = new Set(selectedPageIndices);
-		if (next.has(i)) next.delete(i);
-		else next.add(i);
-		selectedPageIndices = next;
+		if (selectedPageIndices.has(i)) selectedPageIndices.delete(i);
+		else selectedPageIndices.add(i);
 	}
 
 	function handleConfirm() {
@@ -274,7 +272,7 @@
 								>
 									<canvas
 										use:renderThumb={i}
-										class="w-full aspect-[3/4] bg-surface-100-900 rounded object-contain"
+										class="w-full aspect-3/4 bg-surface-100-900 rounded object-contain"
 									></canvas>
 									<span class="text-xs text-surface-500"
 										>{i + 1}</span
