@@ -6,7 +6,10 @@
 	import { findMatches } from "$lib/services/search";
 	import { RENDER_SCALE } from "$lib/services/charBoxes";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
-	import { normalizePdfBytes } from "$lib/services/decryptPdf";
+	import {
+		normalizePdfBytes,
+		isPdfEncrypted,
+	} from "$lib/services/decryptPdf";
 	import {
 		splitPdf,
 		downloadSplitPdfs,
@@ -57,6 +60,20 @@
 	let exporting = $state(false);
 	let exportError: string | null = $state(null);
 
+	// The base PDF renders fine (PDFium decrypts it) but can't be exported while
+	// encrypted — probe once so we can warn in the toolbar.
+	let baseEncrypted = $state(false);
+	$effect(() => {
+		const bytes = pdfBytes;
+		let cancelled = false;
+		void isPdfEncrypted(bytes).then((enc) => {
+			if (!cancelled) baseEncrypted = enc;
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	// Finder-style multi-select of page positions for bulk exclude.
 	let selectedPositions = new SvelteSet<number>();
 	let selectionAnchor: number | null = $state(null);
@@ -78,6 +95,7 @@
 		doc: PDFiumDocument;
 		pageCount: number;
 		pages: PageData[];
+		encrypted: boolean;
 	}
 	interface InsertedPage {
 		sourceId: string;
@@ -202,6 +220,34 @@
 			insertedPages.length > 0,
 	);
 
+	// Source ids that contribute at least one non-excluded page to the export.
+	let usedSourceIds = $derived(
+		(() => {
+			const ids = new SvelteSet<string>();
+			combinedSequence.forEach((ref, k) => {
+				if (deletedPages.has(k)) return;
+				ids.add(ref.kind === "original" ? "primary" : ref.sourceId);
+			});
+			return ids;
+		})(),
+	);
+
+	// True when an encrypted PDF is actually part of the current export — drives
+	// the toolbar warning, so excluding all its pages makes the warning vanish.
+	let exportHasEncryptedSource = $derived(
+		(baseEncrypted && usedSourceIds.has("primary")) ||
+			sources.some((s) => s.encrypted && usedSourceIds.has(s.id)),
+	);
+
+	// Clear a stale export error when the edit set changes — e.g. after
+	// excluding the page that came from an encrypted source.
+	$effect(() => {
+		deletedPages.size;
+		insertedPages.length;
+		splitPoints.size;
+		exportError = null;
+	});
+
 	let fileCount = $derived(
 		computeSegmentPositions(
 			combinedSequence.length,
@@ -309,6 +355,7 @@
 				doc: newDoc,
 				pageCount: payload.sourcePageCount,
 				pages: pagesData,
+				encrypted: payload.encrypted,
 			},
 		];
 		pendingInsert = { ...payload, sourceId };
@@ -444,19 +491,6 @@
 		exporting = true;
 		exportError = null;
 		try {
-			// Reject encrypted sources up front (naming the culprit); pdf-lib
-			// can't decrypt and would otherwise emit garbled pages.
-			const sourcesMap = new SvelteMap<string, Uint8Array>();
-			sourcesMap.set(
-				"primary",
-				await normalizePdfBytes(
-					pdfBytes,
-					sourceFilename ?? "the main document",
-				),
-			);
-			for (const s of sources)
-				sourcesMap.set(s.id, await normalizePdfBytes(s.bytes, s.name));
-
 			const sequence: SequenceEntry[] = combinedSequence.map((ref) =>
 				ref.kind === "original"
 					? { sourceId: "primary", pageIndex: ref.index }
@@ -465,6 +499,29 @@
 							pageIndex: ref.sourcePageIndex,
 						},
 			);
+
+			// Reject encrypted *used* sources up front (naming the culprit);
+			// `usedSourceIds` excludes sources whose pages were all removed, so
+			// excluding an encrypted insert lets the export proceed.
+			// pdf-lib can't decrypt and would otherwise emit garbled pages.
+			const bytesById = new SvelteMap<string, Uint8Array>([
+				["primary", pdfBytes],
+				...sources.map((s) => [s.id, s.bytes] as const),
+			]);
+			const labelById = new SvelteMap<string, string>([
+				["primary", sourceFilename ?? "the main document"],
+				...sources.map((s) => [s.id, s.name] as const),
+			]);
+			const sourcesMap = new SvelteMap<string, Uint8Array>();
+			for (const id of usedSourceIds) {
+				sourcesMap.set(
+					id,
+					await normalizePdfBytes(
+						bytesById.get(id)!,
+						labelById.get(id)!,
+					),
+				);
+			}
 
 			const segments = await splitPdf({
 				sources: sourcesMap,
@@ -649,6 +706,17 @@
 						>Edit Mode</span
 					>
 				</div>
+
+				{#if exportHasEncryptedSource}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span
+						class="flex items-center gap-1 text-[12px] text-[#b45309] font-medium cursor-help"
+						role="status"
+						title="An encrypted PDF is part of this export, so it will fail. Replace it with an unencrypted copy (open it in another app, e.g. Preview → File → Export, and re-save without encryption) or exclude its pages."
+					>
+						🔒 Encrypted PDF
+					</span>
+				{/if}
 
 				<div class="w-px h-5 bg-[#f0eeec]"></div>
 
