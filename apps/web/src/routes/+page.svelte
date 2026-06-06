@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
+	import PdfSidebarItems from "$lib/components/PdfSidebarItems.svelte";
+	import PdfViewer from "$lib/components/PdfViewer.svelte";
+	import { ZOOM_BASE_WIDTH } from "$lib/constants/zoom";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
+	import { downloadPdf, setLastPdf, uploadPdf } from "$lib/services/pdf-api";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
-	import { uploadPdf, downloadPdf, setLastPdf } from "$lib/services/pdf-api";
 	import type { PageData as PdfPageData } from "$lib/types";
-	import PdfViewer from "$lib/components/PdfViewer.svelte";
-	import PdfSidebarItems from "$lib/components/PdfSidebarItems.svelte";
 
 	let { data } = $props();
 
@@ -27,7 +28,7 @@
 	let splitMode = $state(false);
 	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
 	let uploadError: string | null = $state(null);
-	let thumbnailWidth = $state(250);
+	let thumbnailWidth = $state(ZOOM_BASE_WIDTH);
 
 	// Both started in parallel by +page.ts load — just await them here
 	async function init() {
@@ -205,6 +206,9 @@
 		{pdfBytes}
 		sourceFilename={pdfFilename}
 		{thumbnailWidth}
+		onThumbnailWidthChange={(value) => {
+			thumbnailWidth = value;
+		}}
 	/>
 {:else if !docLoading}
 	<div
