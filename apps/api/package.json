@@ -15,8 +15,9 @@
 		"format:check": "prettier --check ."
 	},
 	"dependencies": {
-		"@pdfwasm/shared": "workspace:*",
+		"@anthropic-ai/sdk": "^0.102.0",
 		"@hono/node-server": "^1.14.0",
+		"@pdfwasm/shared": "workspace:*",
 		"bcrypt": "^5.1.1",
 		"dotenv": "^16.4.0",
 		"drizzle-orm": "^0.38.0",

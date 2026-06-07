@@ -7,7 +7,12 @@ import { fileTypeFromBuffer } from "file-type";
 import { db } from "../db/index.js";
 import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { MAX_FILE_SIZE, PDF_STORAGE_PATH } from "../constants.js";
+import {
+	MAX_FILE_SIZE,
+	PDF_STORAGE_PATH,
+	MAX_SUGGEST_PAGES,
+} from "../constants.js";
+import { suggestSplitPoints } from "../lib/suggestSplits.js";
 import type { AuthEnv } from "../types.js";
 
 const pdf = new Hono<AuthEnv>();
@@ -175,6 +180,50 @@ pdf.delete("/:id", async (c) => {
 	await db.delete(pdfDocuments).where(eq(pdfDocuments.id, docId));
 
 	return c.json({ success: true });
+});
+
+pdf.post("/suggest-splits", async (c) => {
+	if (!process.env.ANTHROPIC_API_KEY) {
+		return c.json(
+			{ error: "AI suggestions are not configured on the server" },
+			503,
+		);
+	}
+
+	const body = await c.req.json().catch(() => null);
+	const rawPages = body?.pages;
+	if (!Array.isArray(rawPages)) {
+		return c.json({ error: "Invalid request: pages[] required" }, 400);
+	}
+	if (rawPages.length > MAX_SUGGEST_PAGES) {
+		return c.json(
+			{ error: `Too many pages (max ${MAX_SUGGEST_PAGES})` },
+			413,
+		);
+	}
+
+	const pages = rawPages
+		.filter(
+			(p) =>
+				p && Number.isInteger(p.position) && typeof p.text === "string",
+		)
+		.map((p) => ({
+			position: p.position as number,
+			text: p.text as string,
+		}));
+
+	// Nothing to segment, or no text to reason over.
+	if (pages.length < 2 || pages.every((p) => p.text.trim() === "")) {
+		return c.json({ splitAfter: [] });
+	}
+
+	try {
+		const splitAfter = await suggestSplitPoints(pages);
+		return c.json({ splitAfter });
+	} catch (err) {
+		console.error("suggest-splits failed:", err);
+		return c.json({ error: "Suggestion failed" }, 502);
+	}
 });
 
 export default pdf;
