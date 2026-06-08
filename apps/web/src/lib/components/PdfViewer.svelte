@@ -4,7 +4,7 @@
 	import { ZOOM_BASE_WIDTH, stepZoomWidth } from "$lib/constants/zoom";
 	import type { PageData, SearchMatch } from "$lib/types";
 	import { findMatches } from "$lib/services/search";
-	import { RENDER_SCALE } from "$lib/services/charBoxes";
+	import { RENDER_SCALE, extractCharBoxes } from "$lib/services/charBoxes";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import {
 		normalizePdfBytes,
@@ -16,6 +16,7 @@
 		computeSegmentPositions,
 		type SequenceEntry,
 	} from "$lib/services/splitPdf";
+	import { suggestSplitPoints } from "$lib/services/suggestSplits";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
@@ -59,6 +60,17 @@
 	let deletedPages = new SvelteSet<number>();
 	let exporting = $state(false);
 	let exportError: string | null = $state(null);
+
+	// AI-suggested split points (KDA-53). The model proposes boundaries the user
+	// reviews and tweaks before exporting — never an auto-export.
+	let suggesting = $state(false);
+	let suggestError: string | null = $state(null);
+	// Transient status after a suggestion (incl. "found nothing", so a no-op
+	// result doesn't read as a broken button).
+	let suggestNotice: string | null = $state(null);
+	let suggestNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+	// Leading chars per page sent to the model; the server truncates again.
+	const SUGGEST_SNIPPET_LEN = 400;
 
 	// The base PDF renders fine (PDFium decrypts it) but can't be exported while
 	// encrypted — probe once so we can warn in the toolbar.
@@ -419,6 +431,62 @@
 		}
 	}
 
+	// Ask the server's LLM to propose split points, then drop them into the
+	// editor for the user to review/adjust. Replaces any current split markers.
+	async function suggestSplits() {
+		if (suggesting || awaitingAnchor || combinedSequence.length < 2) return;
+		suggesting = true;
+		suggestError = null;
+		suggestNotice = null;
+		clearTimeout(suggestNoticeTimer);
+		try {
+			const payload = combinedSequence.map((ref, position) => {
+				const pageData = resolvePageData(ref);
+				// chars are extracted lazily on render; force it for any page
+				// the user hasn't scrolled to yet.
+				if (pageData.chars.length === 0) {
+					const pageIndex =
+						ref.kind === "original"
+							? ref.index
+							: ref.sourcePageIndex;
+					pageData.chars = extractCharBoxes(
+						resolveDoc(ref).getPage(pageIndex),
+					);
+				}
+				const text = pageData.chars
+					.map((ch) => ch.char)
+					.join("")
+					.replace(/\s+/g, " ")
+					.trim()
+					.slice(0, SUGGEST_SNIPPET_LEN);
+				return { position, text };
+			});
+
+			const splitAfter = await suggestSplitPoints(payload);
+
+			// Trust nothing: keep only valid non-final positions.
+			const maxValid = combinedSequence.length - 1;
+			splitPoints.clear();
+			for (const p of splitAfter) {
+				if (Number.isInteger(p) && p >= 0 && p < maxValid) {
+					splitPoints.add(p);
+				}
+			}
+
+			const count = splitPoints.size;
+			suggestNotice =
+				count > 0
+					? `Suggested ${count} split${count === 1 ? "" : "s"} — review and adjust`
+					: "No split points found";
+			suggestNoticeTimer = setTimeout(() => (suggestNotice = null), 5000);
+		} catch (e) {
+			suggestError =
+				e instanceof Error ? e.message : "Couldn’t suggest splits";
+		} finally {
+			suggesting = false;
+		}
+	}
+
 	function toggleDeletedPage(position: number) {
 		// If this page is part of a multi-selection, the ✕ toggles the whole
 		// selection at once; otherwise just this page (the original behavior).
@@ -728,6 +796,17 @@
 					+ Insert Pages
 				</button>
 
+				<button
+					class="px-3 py-[5px] rounded-lg border border-[#c7d2fe] bg-[#eef2ff] text-[#4f46e5] text-[12px] font-medium hover:bg-[#e0e7ff] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+					onclick={suggestSplits}
+					disabled={suggesting ||
+						awaitingAnchor ||
+						combinedSequence.length < 2}
+					title="Let AI propose split points — review and adjust them before exporting"
+				>
+					{suggesting ? "Suggesting…" : "✨ Suggest splits"}
+				</button>
+
 				{#if selectedToExclude.length > 0}
 					<button
 						class="px-3 py-[5px] rounded-lg border border-[#fecaca] bg-[#fef2f2] text-[#ef4444] text-[12px] font-medium hover:bg-[#fee2e2] transition-colors cursor-pointer"
@@ -799,6 +878,24 @@
 						role="alert"
 					>
 						Export failed: {exportError}
+					</span>
+				{/if}
+
+				{#if suggestError}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span
+						class="text-[12px] text-[#ef4444] font-medium"
+						role="alert"
+					>
+						{suggestError}
+					</span>
+				{:else if suggestNotice}
+					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<span
+						class="text-[12px] text-[#6366f1] font-medium"
+						role="status"
+					>
+						{suggestNotice}
 					</span>
 				{/if}
 			</div>
