@@ -1,9 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import {
-	SUGGEST_MODEL_SMALL,
-	SUGGEST_MODEL_LARGE,
-	SUGGEST_LARGE_DOC_PAGES,
+	SUGGEST_MODEL,
+	SUGGEST_CHUNK_THRESHOLD,
+	SUGGEST_CHUNK_WINDOW,
+	SUGGEST_CHUNK_OVERLAP,
 	SUGGEST_SNIPPET_MAX,
 } from "../constants.js";
 
@@ -48,25 +49,8 @@ const outputFormat = jsonSchemaOutputFormat({
 	additionalProperties: false,
 } as const);
 
-/**
- * Ask Claude which pages begin a new chapter / section / document, then
- * convert each to a split point. The model reports the first page of each new
- * unit (the page carrying the heading); we split BEFORE it (startPage - 1) so
- * that heading/divider page leads its file. Returns a sorted, de-duplicated
- * list of valid non-final positions to split AFTER.
- */
-export async function suggestSplitPoints(
-	pages: SuggestPage[],
-): Promise<number[]> {
-	const valid = new Set(pages.map((p) => p.position));
-	const firstPosition = Math.min(...pages.map((p) => p.position));
-	const lastPosition = Math.max(...pages.map((p) => p.position));
-
-	const blankByPosition = new Map(
-		pages.map((p) => [p.position, p.text.trim() === ""]),
-	);
-	const isBlank = (pos: number) => blankByPosition.get(pos) ?? true;
-
+/** Ask the model which pages begin a new unit, for one listing of pages. */
+async function requestStartPages(pages: SuggestPage[]): Promise<number[]> {
 	const listing = pages
 		.map((p) =>
 			p.text.trim() === ""
@@ -75,14 +59,8 @@ export async function suggestSplitPoints(
 		)
 		.join("\n");
 
-	// Long listings make the small model drift; switch up for big documents.
-	const model =
-		pages.length >= SUGGEST_LARGE_DOC_PAGES
-			? SUGGEST_MODEL_LARGE
-			: SUGGEST_MODEL_SMALL;
-
 	const message = await getClient().messages.parse({
-		model,
+		model: SUGGEST_MODEL,
 		max_tokens: 2048,
 		system: SYSTEM_PROMPT,
 		messages: [
@@ -94,16 +72,35 @@ export async function suggestSplitPoints(
 		output_config: { format: outputFormat },
 	});
 
-	// Model returns each new unit's first page; split BEFORE it so the heading
-	// page leads the new file (split-after position = startPage - 1).
-	const raw = message.parsed_output?.startPages ?? [];
+	return message.parsed_output?.startPages ?? [];
+}
+
+/**
+ * Convert model-reported unit-start pages into validated split-after positions.
+ * The model reports the first page of each new unit (the page carrying the
+ * heading); we split BEFORE it (startPage - 1) so the heading/divider page
+ * leads its file, advancing past any blank page so blanks stay with the
+ * preceding file. Returns a sorted, de-duplicated list of valid non-final
+ * positions.
+ */
+function toSplitPoints(
+	pages: SuggestPage[],
+	startPages: Iterable<number>,
+): number[] {
+	const valid = new Set(pages.map((p) => p.position));
+	const firstPosition = Math.min(...pages.map((p) => p.position));
+	const lastPosition = Math.max(...pages.map((p) => p.position));
+	const blankByPosition = new Map(
+		pages.map((p) => [p.position, p.text.trim() === ""]),
+	);
+	const isBlank = (pos: number) => blankByPosition.get(pos) ?? true;
+
 	const kept = new Set<number>();
-	for (const s of raw) {
+	for (const s of startPages) {
 		if (!Number.isInteger(s) || !valid.has(s)) continue;
 
 		// A unit never starts on a blank page (books put a blank verso before a
-		// chapter opener). Advance to the real opener so the blank stays with the
-		// preceding file.
+		// chapter opener). Advance to the real opener.
 		let opener = s;
 		while (opener <= lastPosition && isBlank(opener)) opener++;
 		if (opener > lastPosition || !valid.has(opener)) continue;
@@ -114,4 +111,38 @@ export async function suggestSplitPoints(
 		}
 	}
 	return [...kept].sort((a, b) => a - b);
+}
+
+/** Slice pages into overlapping windows for chunked processing. */
+function buildWindows(pages: SuggestPage[]): SuggestPage[][] {
+	const stride = SUGGEST_CHUNK_WINDOW - SUGGEST_CHUNK_OVERLAP;
+	const windows: SuggestPage[][] = [];
+	for (let start = 0; start < pages.length; start += stride) {
+		windows.push(pages.slice(start, start + SUGGEST_CHUNK_WINDOW));
+		if (start + SUGGEST_CHUNK_WINDOW >= pages.length) break;
+	}
+	return windows;
+}
+
+/**
+ * Propose split points for a PDF. Large docs (>= SUGGEST_CHUNK_THRESHOLD) are
+ * split into overlapping windows processed in parallel, so the model never has
+ * to track page numbers across a long listing (which makes accuracy drift the
+ * deeper it gets); smaller docs go in a single call. Boundaries found in any
+ * window are merged.
+ */
+export async function suggestSplitPoints(
+	pages: SuggestPage[],
+): Promise<number[]> {
+	const windows =
+		pages.length >= SUGGEST_CHUNK_THRESHOLD ? buildWindows(pages) : [pages];
+
+	const perWindow = await Promise.all(
+		windows.map((w) => requestStartPages(w)),
+	);
+
+	const merged = new Set<number>();
+	for (const list of perWindow) for (const s of list) merged.add(s);
+
+	return toSplitPoints(pages, merged);
 }
