@@ -12,6 +12,7 @@
 		"build:api": "pnpm --filter @api build",
 		"preview": "pnpm --filter @web preview",
 		"check": "pnpm --filter @web check",
+		"test": "pnpm --filter @web test",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
