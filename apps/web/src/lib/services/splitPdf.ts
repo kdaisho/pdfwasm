@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, type PDFPage } from "pdf-lib";
 import JSZip from "jszip";
 
 /** One entry in the combined sequence: a single page, identified by its source and that source's page index. */
@@ -89,12 +89,40 @@ export async function splitPdf(args: {
 	const results: Uint8Array[] = [];
 	for (const positions of segmentPositions) {
 		const newDoc = await PDFDocument.create();
+
+		// Group this segment's page indices by source, preserving order of
+		// appearance. Copying all of a source's pages in a SINGLE copyPages call
+		// lets pdf-lib's PDFObjectCopier deduplicate shared indirect objects
+		// (embedded fonts, images, etc.) across them. Copying one page per call
+		// would re-clone those shared resources for every page, bloating output.
+		const indicesBySource = new Map<string, number[]>();
 		for (const k of positions) {
 			const entry = sequence[k];
-			const srcDoc = await ensureLoaded(entry.sourceId);
-			const [copied] = await newDoc.copyPages(srcDoc, [entry.pageIndex]);
-			newDoc.addPage(copied);
+			const arr = indicesBySource.get(entry.sourceId) ?? [];
+			arr.push(entry.pageIndex);
+			indicesBySource.set(entry.sourceId, arr);
 		}
+
+		const copiedBySource = new Map<string, PDFPage[]>();
+		for (const [sourceId, indices] of indicesBySource) {
+			const srcDoc = await ensureLoaded(sourceId);
+			copiedBySource.set(
+				sourceId,
+				await newDoc.copyPages(srcDoc, indices),
+			);
+		}
+
+		// Add pages back in the original segment order. copyPages returns pages
+		// aligned 1:1 with the requested indices (duplicates included), so a
+		// per-source cursor maps each position to its copied page.
+		const cursorBySource = new Map<string, number>();
+		for (const k of positions) {
+			const entry = sequence[k];
+			const cursor = cursorBySource.get(entry.sourceId) ?? 0;
+			newDoc.addPage(copiedBySource.get(entry.sourceId)![cursor]);
+			cursorBySource.set(entry.sourceId, cursor + 1);
+		}
+
 		results.push(await newDoc.save());
 	}
 
