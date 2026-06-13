@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "@skeletonlabs/skeleton";
-@import "@skeletonlabs/skeleton/themes/hamlindigo";
+@import "./themes/custom-theme.css";
 
 :root {
 	--color-bg-app: #fafaf9;
