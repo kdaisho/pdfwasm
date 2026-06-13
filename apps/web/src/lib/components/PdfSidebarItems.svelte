@@ -22,6 +22,7 @@
 		thumbnailWidth: number;
 		onThumbnailWidthChange: (value: number) => void;
 		showZoom: boolean;
+		hasDocument: boolean;
 	}
 
 	let {
@@ -38,14 +39,22 @@
 		thumbnailWidth,
 		onThumbnailWidthChange,
 		showZoom,
+		hasDocument,
 	}: Props = $props();
 
 	const auth = getAuth();
 </script>
 
-<div class="flex flex-col gap-[2px] p-[10px]">
+<div class="flex flex-col gap-2 p-[10px]">
+	<!--
+		Open PDF is the primary CTA only when no document is open; once a PDF is
+		loaded (View or Edit mode) it demotes to a secondary/ghost button so the
+		primary action reflects context.
+	-->
 	<label
-		class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg cursor-pointer bg-[#6366f1] text-white text-[13px] font-medium hover:bg-[#5457e5] transition-colors"
+		class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg cursor-pointer text-[13px] font-medium transition-colors {hasDocument
+			? 'bg-transparent text-[#78716c] hover:bg-[#f0eeec]'
+			: 'bg-[#6366f1] text-white hover:bg-[#5457e5]'}"
 	>
 		<svg
 			width="14"
@@ -144,12 +153,6 @@
 				onThumbnailWidthChange(+(e.target as HTMLInputElement).value)}
 			class="w-full cursor-pointer accent-[#6366f1]"
 		/>
-		{#if uploadStatus === "saved"}
-			<div class="flex items-center gap-1.5 mt-2">
-				<span class="w-1.5 h-1.5 rounded-full bg-[#22c55e]"></span>
-				<span class="text-[11px] text-[#a8a29e] font-mono">saved</span>
-			</div>
-		{/if}
 	</div>
 {/if}
 

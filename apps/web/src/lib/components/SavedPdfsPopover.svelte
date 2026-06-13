@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Popover } from "@skeletonlabs/skeleton-svelte";
+	import { Popover, Portal } from "@skeletonlabs/skeleton-svelte";
 	import {
 		listPdfs,
 		deletePdf,
@@ -109,64 +109,75 @@
 			My PDFs
 		</button>
 	</Popover.Trigger>
-	<Popover.Positioner class="z-50">
-		<Popover.Content
-			class="card bg-surface-100-900 p-3 shadow-lg w-72 min-h-12 max-h-80 overflow-y-auto"
-		>
-			{#if loading}
-				<p class="text-sm text-surface-500 text-center py-4">
-					Loading…
-				</p>
-			{:else if error}
-				<p class="text-sm text-error-500 text-center py-4">
-					{error}
-				</p>
-			{:else if pdfs.length === 0}
-				<p class="text-sm text-surface-500 text-center py-4">
-					No saved PDFs
-				</p>
-			{:else}
-				<ul class="space-y-1">
-					{#each pdfs as pdf (pdf.id)}
-						<li>
-							<div
-								class="w-full text-left px-2 py-1.5 rounded hover:bg-surface-200-800 flex items-center gap-2 group cursor-pointer"
-								role="button"
-								tabindex="0"
-								onclick={() => {
-									open = false;
-									onSelect(pdf.id, pdf.filename);
-								}}
-								onkeydown={(e) => {
-									if (e.key === "Enter" || e.key === " ") {
-										e.preventDefault();
+	<!--
+		Portal the positioner to document.body so it escapes the sidebar's
+		stacking/overflow context and always paints above viewer content.
+	-->
+	<Portal>
+		<Popover.Positioner class="z-50">
+			<Popover.Content
+				class="card bg-surface-100-900 p-3 shadow-lg w-72 min-h-12 max-h-80 overflow-y-auto"
+			>
+				{#if loading}
+					<p class="text-sm text-surface-500 text-center py-4">
+						Loading…
+					</p>
+				{:else if error}
+					<p class="text-sm text-error-500 text-center py-4">
+						{error}
+					</p>
+				{:else if pdfs.length === 0}
+					<p class="text-sm text-surface-500 text-center py-4">
+						No saved PDFs
+					</p>
+				{:else}
+					<ul class="space-y-1">
+						{#each pdfs as pdf (pdf.id)}
+							<li>
+								<div
+									class="w-full text-left px-2 py-1.5 rounded hover:bg-surface-200-800 flex items-center gap-2 group cursor-pointer"
+									role="button"
+									tabindex="0"
+									onclick={() => {
 										open = false;
 										onSelect(pdf.id, pdf.filename);
-									}
-								}}
-							>
-								<div class="flex-1 min-w-0">
-									<div class="text-sm font-medium truncate">
-										{pdf.filename}
-									</div>
-									<div class="text-xs text-surface-500">
-										{formatSize(pdf.fileSize)} &middot; {formatDate(
-											pdf.uploadedAt,
-										)}
-									</div>
-								</div>
-								<button
-									class="text-xs text-surface-400 hover:text-error-500 opacity-0 group-hover:opacity-100 transition-opacity px-1"
-									onclick={(e) => handleDelete(e, pdf.id)}
-									title="Delete"
+									}}
+									onkeydown={(e) => {
+										if (
+											e.key === "Enter" ||
+											e.key === " "
+										) {
+											e.preventDefault();
+											open = false;
+											onSelect(pdf.id, pdf.filename);
+										}
+									}}
 								>
-									✕
-								</button>
-							</div>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</Popover.Content>
-	</Popover.Positioner>
+									<div class="flex-1 min-w-0">
+										<div
+											class="text-sm font-medium truncate"
+										>
+											{pdf.filename}
+										</div>
+										<div class="text-xs text-surface-500">
+											{formatSize(pdf.fileSize)} &middot; {formatDate(
+												pdf.uploadedAt,
+											)}
+										</div>
+									</div>
+									<button
+										class="text-xs text-surface-400 hover:text-error-500 opacity-0 group-hover:opacity-100 transition-opacity px-1"
+										onclick={(e) => handleDelete(e, pdf.id)}
+										title="Delete"
+									>
+										✕
+									</button>
+								</div>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</Popover.Content>
+		</Popover.Positioner>
+	</Portal>
 </Popover>
