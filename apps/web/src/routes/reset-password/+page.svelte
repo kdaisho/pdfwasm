@@ -53,7 +53,10 @@
 			const raw = sessionStorage.getItem(STORAGE_KEY);
 			if (!raw) return;
 			const saved = JSON.parse(raw);
-			if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+			// Drop persisted state after 10 min, matching the OTP server-side TTL —
+			// keeps a stale verify screen (and any passphrase in storage) from
+			// lingering longer than the code is useful.
+			if (Date.now() - saved.savedAt > 10 * 60 * 1000) {
 				sessionStorage.removeItem(STORAGE_KEY);
 				return;
 			}

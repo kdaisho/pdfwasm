@@ -97,7 +97,11 @@ auth.post("/signup/init", async (c) => {
 		.limit(1);
 
 	if (existing.length > 0) {
-		return c.json({ error: "Email already registered" }, 409);
+		// Don't reveal that the email is already registered — return the same
+		// generic response a fresh signup gets, and send nothing. The "check your
+		// inbox" screen tells existing users to log in or reset instead, so the
+		// endpoint can't be used to probe which emails have accounts.
+		return c.json({ ok: true });
 	}
 
 	const [recentSignup] = await db
@@ -147,7 +151,11 @@ auth.post("/signup/init", async (c) => {
 		expiresAt,
 	});
 
-	await sendOtpEmail(email, otp, "signup");
+	// Fire-and-forget: don't await, so the response time doesn't depend on the
+	// email send (closes the timing side-channel vs. the early-return existing-email path).
+	void sendOtpEmail(email, otp, "signup").catch((err) =>
+		console.error("[email] signup OTP send failed:", err),
+	);
 
 	return c.json({ ok: true });
 });
@@ -155,7 +163,7 @@ auth.post("/signup/init", async (c) => {
 auth.post("/signup/verify-otp", async (c) => {
 	const { email, otp } = await c.req.json();
 	if (!email || !otp) {
-		return c.json({ error: "Email and OTP are required" }, 400);
+		return c.json({ error: "Email and code are required." }, 400);
 	}
 
 	const [record] = await db
@@ -171,18 +179,29 @@ auth.post("/signup/verify-otp", async (c) => {
 		.limit(1);
 
 	if (!record) {
-		return c.json({ error: "No pending verification for this email" }, 404);
+		return c.json(
+			{
+				error: "We couldn't find a pending verification for this email. Please request a new code.",
+			},
+			404,
+		);
 	}
 
 	if (record.expiresAt < new Date()) {
 		await db
 			.delete(emailVerifications)
 			.where(eq(emailVerifications.id, record.id));
-		return c.json({ error: "OTP has expired. Please start over." }, 410);
+		return c.json(
+			{ error: "Your code has expired. Please request a new one." },
+			410,
+		);
 	}
 
 	if (record.attempts >= MAX_OTP_ATTEMPTS) {
-		return c.json({ error: "Too many attempts. Please start over." }, 429);
+		return c.json(
+			{ error: "Too many incorrect attempts. Please start over." },
+			429,
+		);
 	}
 
 	const valid = await verifyOtp(otp, record.otpHash);
@@ -194,7 +213,7 @@ auth.post("/signup/verify-otp", async (c) => {
 		const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
 		return c.json(
 			{
-				error: `Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
+				error: `That code isn't right. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
 			},
 			400,
 		);
@@ -216,7 +235,10 @@ auth.post("/signup/verify-otp", async (c) => {
 auth.post("/signup/complete", async (c) => {
 	const { verifiedToken } = await c.req.json();
 	if (!verifiedToken) {
-		return c.json({ error: "Verified token is required" }, 400);
+		return c.json(
+			{ error: "Your session has expired. Please start over." },
+			400,
+		);
 	}
 
 	const [record] = await db
@@ -231,7 +253,10 @@ auth.post("/signup/complete", async (c) => {
 		.limit(1);
 
 	if (!record || !record.verifiedAt || !record.passphraseHash) {
-		return c.json({ error: "Invalid or expired token" }, 400);
+		return c.json(
+			{ error: "Your session has expired. Please start over." },
+			400,
+		);
 	}
 
 	// Create user
@@ -385,7 +410,11 @@ auth.post("/reset/init", async (c) => {
 		expiresAt,
 	});
 
-	await sendOtpEmail(email, otp, "password_reset");
+	// Fire-and-forget: don't await, so the response time doesn't depend on the
+	// email send (closes the timing side-channel vs. the early-return no-account path).
+	void sendOtpEmail(email, otp, "password_reset").catch((err) =>
+		console.error("[email] reset OTP send failed:", err),
+	);
 
 	return c.json({ ok: true });
 });
@@ -393,7 +422,7 @@ auth.post("/reset/init", async (c) => {
 auth.post("/reset/verify-otp", async (c) => {
 	const { email, otp } = await c.req.json();
 	if (!email || !otp) {
-		return c.json({ error: "Email and OTP are required" }, 400);
+		return c.json({ error: "Email and code are required." }, 400);
 	}
 
 	const [record] = await db
@@ -409,18 +438,29 @@ auth.post("/reset/verify-otp", async (c) => {
 		.limit(1);
 
 	if (!record) {
-		return c.json({ error: "No pending reset for this email" }, 404);
+		return c.json(
+			{
+				error: "We couldn't find a pending reset for this email. Please request a new code.",
+			},
+			404,
+		);
 	}
 
 	if (record.expiresAt < new Date()) {
 		await db
 			.delete(emailVerifications)
 			.where(eq(emailVerifications.id, record.id));
-		return c.json({ error: "OTP has expired. Please start over." }, 410);
+		return c.json(
+			{ error: "Your code has expired. Please request a new one." },
+			410,
+		);
 	}
 
 	if (record.attempts >= MAX_OTP_ATTEMPTS) {
-		return c.json({ error: "Too many attempts. Please start over." }, 429);
+		return c.json(
+			{ error: "Too many incorrect attempts. Please start over." },
+			429,
+		);
 	}
 
 	const valid = await verifyOtp(otp, record.otpHash);
@@ -432,7 +472,7 @@ auth.post("/reset/verify-otp", async (c) => {
 		const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
 		return c.json(
 			{
-				error: `Invalid code. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
+				error: `That code isn't right. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`,
 			},
 			400,
 		);
@@ -454,7 +494,10 @@ auth.post("/reset/verify-otp", async (c) => {
 auth.post("/reset/complete", async (c) => {
 	const { verifiedToken } = await c.req.json();
 	if (!verifiedToken) {
-		return c.json({ error: "Verified token is required" }, 400);
+		return c.json(
+			{ error: "Your session has expired. Please start over." },
+			400,
+		);
 	}
 
 	const [record] = await db
@@ -469,7 +512,10 @@ auth.post("/reset/complete", async (c) => {
 		.limit(1);
 
 	if (!record || !record.verifiedAt || !record.passphraseHash) {
-		return c.json({ error: "Invalid or expired token" }, 400);
+		return c.json(
+			{ error: "Your session has expired. Please start over." },
+			400,
+		);
 	}
 
 	const [user] = await db
@@ -479,7 +525,10 @@ auth.post("/reset/complete", async (c) => {
 		.limit(1);
 
 	if (!user) {
-		return c.json({ error: "User not found" }, 404);
+		return c.json(
+			{ error: "Something went wrong. Please start over." },
+			404,
+		);
 	}
 
 	// Update passphrase and invalidate existing sessions
