@@ -54,7 +54,10 @@
 			const raw = sessionStorage.getItem(STORAGE_KEY);
 			if (!raw) return;
 			const saved = JSON.parse(raw);
-			if (Date.now() - saved.savedAt > 30 * 60 * 1000) {
+			// Drop persisted state after 10 min, matching the OTP server-side TTL —
+			// keeps a stale verify screen (and any passphrase in storage) from
+			// lingering longer than the code is useful.
+			if (Date.now() - saved.savedAt > 10 * 60 * 1000) {
 				sessionStorage.removeItem(STORAGE_KEY);
 				return;
 			}
@@ -300,6 +303,15 @@
 						>
 							Go back and resend
 						</button>
+					</p>
+
+					<p class="text-xs text-surface-500 mt-2 text-center">
+						Already have an account? You won't get a code —
+						<a href={resolve("/login")} class="underline">log in</a>
+						or
+						<a href={resolve("/reset-password")} class="underline"
+							>reset your passphrase</a
+						>.
 					</p>
 				</div>
 			</Steps.Content>
