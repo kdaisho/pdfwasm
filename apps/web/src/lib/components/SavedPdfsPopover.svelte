@@ -60,7 +60,7 @@
 >
 	<Popover.Trigger>
 		<button
-			class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg bg-transparent border-none text-[#78716c] text-[13px] font-medium hover:bg-[#f0eeec] transition-colors cursor-pointer"
+			class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg bg-transparent border-none text-surface-500 text-[13px] font-medium hover:bg-surface-100 transition-colors cursor-pointer"
 		>
 			<svg
 				width="14"

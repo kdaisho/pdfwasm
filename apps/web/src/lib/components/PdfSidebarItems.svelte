@@ -53,8 +53,8 @@
 	-->
 	<label
 		class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg cursor-pointer text-[13px] font-medium transition-colors {hasDocument
-			? 'bg-transparent text-[#78716c] hover:bg-[#f0eeec]'
-			: 'bg-[#6366f1] text-white hover:bg-[#5457e5]'}"
+			? 'bg-transparent text-surface-500 hover:bg-surface-100'
+			: 'bg-primary-500 text-primary-contrast-500 hover:bg-primary-600'}"
 	>
 		<svg
 			width="14"
@@ -83,7 +83,7 @@
 	{#if showSplit}
 		{#if splitMode}
 			<button
-				class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg border-none bg-[#fef2f2] text-[#ef4444] text-[13px] font-medium hover:bg-[#fee2e2] transition-colors cursor-pointer"
+				class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg border-none bg-error-50 text-error-500 text-[13px] font-medium hover:bg-error-100 transition-colors cursor-pointer"
 				onclick={onToggleSplit}
 			>
 				<svg
@@ -104,7 +104,7 @@
 			</button>
 		{:else}
 			<button
-				class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg border-none bg-transparent text-[#78716c] text-[13px] font-medium hover:bg-[#f0eeec] transition-colors cursor-pointer"
+				class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg border-none bg-transparent text-surface-500 text-[13px] font-medium hover:bg-surface-100 transition-colors cursor-pointer"
 				onclick={onToggleSplit}
 			>
 				<svg
@@ -133,13 +133,13 @@
 </div>
 
 {#if showZoom}
-	<div class="mx-4 pt-3 border-t border-[#e7e5e4]">
+	<div class="mx-4 pt-3 border-t border-surface-200">
 		<div class="flex justify-between items-center mb-2">
 			<span
-				class="text-[11px] text-[#a8a29e] font-semibold uppercase tracking-[0.07em]"
+				class="text-[11px] text-surface-400 font-semibold uppercase tracking-[0.07em]"
 				>Zoom</span
 			>
-			<span class="text-[12px] text-[#78716c] font-mono"
+			<span class="text-[12px] text-surface-500 font-mono"
 				>{Math.round((thumbnailWidth / ZOOM_BASE_WIDTH) * 100)}%</span
 			>
 		</div>
@@ -151,29 +151,29 @@
 			value={thumbnailWidth}
 			oninput={(e) =>
 				onThumbnailWidthChange(+(e.target as HTMLInputElement).value)}
-			class="w-full cursor-pointer accent-[#6366f1]"
+			class="w-full cursor-pointer accent-primary-500"
 		/>
 	</div>
 {/if}
 
 <div class="px-4 mt-2 flex flex-col gap-1">
 	{#if uploadStatus === "uploading"}
-		<span class="text-[11px] text-[#a8a29e] font-mono">saving…</span>
+		<span class="text-[11px] text-surface-400 font-mono">saving…</span>
 	{:else if uploadStatus === "error"}
-		<span class="text-[11px] text-[#ef4444]"
+		<span class="text-[11px] text-error-500"
 			>Save failed{uploadError ? `: ${uploadError}` : ""}</span
 		>
 	{/if}
 
 	{#if docLoading}
-		<span class="text-[11px] text-[#a8a29e]">Rendering pages…</span>
+		<span class="text-[11px] text-surface-400">Rendering pages…</span>
 	{/if}
 
 	{#if docError}
-		<span class="text-[11px] text-[#ef4444]">Error: {docError.message}</span
+		<span class="text-[11px] text-error-500">Error: {docError.message}</span
 		>
 		<button
-			class="px-[10px] py-1 rounded-lg bg-[#fef2f2] text-[#ef4444] text-[11px] font-medium border-none cursor-pointer hover:bg-[#fee2e2] transition-colors"
+			class="px-[10px] py-1 rounded-lg bg-error-50 text-error-500 text-[11px] font-medium border-none cursor-pointer hover:bg-error-100 transition-colors"
 			onclick={onDismissError}
 		>
 			Dismiss
