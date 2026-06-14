@@ -760,7 +760,7 @@
 	{/if}
 
 	{#if splitMode}
-		<div class="sticky top-4 z-10 flex justify-center pointer-events-none">
+		<div class="sticky top-4 z-20 flex justify-center pointer-events-none">
 			<div
 				class="flex items-center gap-2.5 bg-white rounded-[14px] px-3.5 py-[7px] pointer-events-auto"
 				style="box-shadow: 0 2px 16px color-mix(in oklab, var(--color-primary-500) 12%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-primary-500) 10%, transparent)"
@@ -789,7 +789,7 @@
 				<div class="w-px h-5 bg-surface-100"></div>
 
 				<button
-					class="px-3 py-[5px] rounded-lg border border-surface-200 bg-white text-surface-700 text-[12px] font-medium hover:bg-surface-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+					class="px-3 py-[5px] rounded-lg border border-surface-200 bg-white text-surface-700 text-[12px] font-medium hover:bg-surface-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
 					onclick={() => (insertModalOpen = true)}
 					disabled={awaitingAnchor}
 				>
@@ -1104,7 +1104,7 @@
 								: 'border-dashed border-primary-200 opacity-80 group-hover:border-primary-500 group-hover:opacity-100'}"
 						></span>
 						<span
-							class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center transition-all duration-150 {splitPoints.has(
+							class="absolute text-sm rounded-full w-[26px] h-[26px] flex items-center justify-center transition-all duration-150 {splitPoints.has(
 								position,
 							)
 								? 'bg-primary-500 text-white shadow-[0_1px_6px_color-mix(in_oklab,var(--color-primary-500)_50%,transparent)]'

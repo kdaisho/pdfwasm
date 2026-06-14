@@ -53,7 +53,7 @@
 					>
 				</div>
 			</div>
-			<div class="mx-4 h-px bg-surface-200"></div>
+			<div class="mx-4 my-2 h-px bg-surface-200"></div>
 		</Navigation.Header>
 		<Navigation.Content>
 			{#if sidebarStore.component}

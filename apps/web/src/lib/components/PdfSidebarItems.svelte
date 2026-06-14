@@ -133,7 +133,7 @@
 </div>
 
 {#if showZoom}
-	<div class="mx-4 pt-3 border-t border-surface-200">
+	<div class="mx-4 mt-3 pt-4 border-t border-surface-200">
 		<div class="flex justify-between items-center mb-2">
 			<span
 				class="text-[11px] text-surface-400 font-semibold uppercase tracking-[0.07em]"
