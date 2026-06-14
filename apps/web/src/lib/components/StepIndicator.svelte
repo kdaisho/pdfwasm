@@ -30,9 +30,9 @@
 				<div
 					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold leading-none transition-colors {step >
 					index
-						? 'preset-filled-success-500'
+						? 'preset-filled-primary-500'
 						: step === index
-							? 'preset-filled-primary-500'
+							? 'preset-outlined-primary-500'
 							: 'preset-outlined-surface-500'}"
 				>
 					{#if step > index}

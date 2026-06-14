@@ -258,7 +258,7 @@
 						</button>
 					</form>
 
-					<p class="text-xs text-surface-500 mt-4 text-center">
+					<p class="text-xs text-surface-500 mt-6 text-center">
 						Didn't receive it?
 						<button
 							class="underline"
@@ -273,7 +273,7 @@
 						</button>
 					</p>
 
-					<p class="text-xs text-surface-500 mt-2 text-center">
+					<p class="text-xs text-surface-500 mt-3 text-center">
 						Already have an account? You won't get a code —
 						<a href={resolve("/login")} class="underline">log in</a>
 						or

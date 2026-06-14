@@ -255,7 +255,7 @@
 						</button>
 					</form>
 
-					<p class="text-xs text-surface-500 mt-4 text-center">
+					<p class="text-xs text-surface-500 mt-6 text-center">
 						Didn't receive it?
 						<button
 							class="underline"
