@@ -52,9 +52,7 @@
 							/>
 						</svg>
 					{:else}
-						<span class="pt-0.5">
-							{index + 1}
-						</span>
+						{index + 1}
 					{/if}
 				</div>
 				<div
