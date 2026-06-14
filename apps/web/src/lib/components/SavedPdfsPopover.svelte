@@ -116,7 +116,7 @@
 	<Portal>
 		<Popover.Positioner class="z-50">
 			<Popover.Content
-				class="card bg-surface-100-900 p-3 shadow-lg w-72 min-h-12 max-h-80 overflow-y-auto"
+				class="card bg-surface-50-950 p-3 shadow-lg w-72 min-h-12 max-h-80 overflow-y-auto"
 			>
 				{#if loading}
 					<p class="text-sm text-surface-500 text-center py-4">
@@ -135,7 +135,7 @@
 						{#each pdfs as pdf (pdf.id)}
 							<li>
 								<div
-									class="w-full text-left px-2 py-1.5 rounded hover:bg-surface-200-800 flex items-center gap-2 group cursor-pointer"
+									class="w-full text-left px-2 py-1.5 rounded hover:bg-surface-100-900 flex items-center gap-2 group cursor-pointer"
 									role="button"
 									tabindex="0"
 									onclick={() => {
