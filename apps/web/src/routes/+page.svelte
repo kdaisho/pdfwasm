@@ -180,8 +180,34 @@
 				thumbnailWidth = value;
 			},
 			showZoom: pages.length > 0,
+			hasDocument: pages.length > 0,
 		});
 	});
+
+	// On logout, clear the open document and per-document controls so the view
+	// reflects a signed-out, empty state. Only fire on the authenticated →
+	// unauthenticated transition, not on initial load or while staying logged out
+	// (a signed-out user can still open a local PDF).
+	let wasAuthenticated = auth.isAuthenticated;
+	$effect(() => {
+		const isAuth = auth.isAuthenticated;
+		if (wasAuthenticated && !isAuth) resetViewer();
+		wasAuthenticated = isAuth;
+	});
+
+	function resetViewer() {
+		charExtractionId++; // cancel any in-flight char extraction
+		currentDoc?.destroy();
+		currentDoc = null;
+		pages = [];
+		pdfBytes = null;
+		pdfFilename = null;
+		splitMode = false;
+		docError = null;
+		docLoading = false;
+		uploadStatus = "idle";
+		uploadError = null;
+	}
 
 	onDestroy(() => {
 		sidebarStore.clear();

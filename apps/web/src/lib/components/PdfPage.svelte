@@ -188,11 +188,11 @@
 		></canvas>
 	{:else}
 		<div
-			class="w-full h-full bg-[#f0f0f0] flex items-center justify-center"
+			class="w-full h-full bg-surface-100 flex items-center justify-center"
 		>
 			{#if rendering}
 				<span
-					class="spinner size-8 border-3 border-[#ddd] border-t-[#4f6ef7] rounded-full"
+					class="spinner size-8 border-3 border-surface-200 border-t-primary-500 rounded-full"
 				></span>
 			{/if}
 		</div>

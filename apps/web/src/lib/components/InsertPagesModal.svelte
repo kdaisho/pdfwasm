@@ -240,7 +240,7 @@
 				{:else if phase === "loading"}
 					<div class="flex flex-col items-center gap-3 py-12">
 						<span
-							class="spinner size-8 border-3 border-[#ddd] border-t-[#4f6ef7] rounded-full"
+							class="spinner size-8 border-3 border-surface-200 border-t-primary-500 rounded-full"
 						></span>
 						<p class="text-sm text-surface-500">Loading PDF…</p>
 					</div>

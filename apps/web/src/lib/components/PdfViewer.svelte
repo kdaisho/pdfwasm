@@ -760,25 +760,25 @@
 	{/if}
 
 	{#if splitMode}
-		<div class="sticky top-4 z-10 flex justify-center pointer-events-none">
+		<div class="sticky top-4 z-20 flex justify-center pointer-events-none">
 			<div
 				class="flex items-center gap-2.5 bg-white rounded-[14px] px-3.5 py-[7px] pointer-events-auto"
-				style="box-shadow: 0 2px 16px rgba(99,102,241,0.12), 0 0 0 1px rgba(99,102,241,0.1)"
+				style="box-shadow: 0 2px 16px color-mix(in oklab, var(--color-primary-500) 12%, transparent), 0 0 0 1px color-mix(in oklab, var(--color-primary-500) 10%, transparent)"
 			>
 				<div class="flex items-center gap-1.5">
 					<span
-						class="w-[7px] h-[7px] rounded-full bg-[#6366f1]"
-						style="box-shadow: 0 0 0 3px rgba(99,102,241,0.2)"
+						class="w-[7px] h-[7px] rounded-full bg-primary-500"
+						style="box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary-500) 20%, transparent)"
 					></span>
-					<span class="text-[12px] text-[#6366f1] font-semibold"
+					<span class="text-[12px] text-primary-500 font-semibold"
 						>Edit Mode</span
 					>
 				</div>
 
 				{#if exportHasEncryptedSource}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<div class="w-px h-5 bg-surface-100"></div>
 					<span
-						class="flex items-center gap-1 text-[12px] text-[#b45309] font-medium cursor-help"
+						class="flex items-center gap-1 text-[12px] text-warning-700 font-medium cursor-help"
 						role="status"
 						title="An encrypted PDF is part of this export, so it will fail. Replace it with an unencrypted copy (open it in another app, e.g. Preview → File → Export, and re-save without encryption) or exclude its pages."
 					>
@@ -786,10 +786,10 @@
 					</span>
 				{/if}
 
-				<div class="w-px h-5 bg-[#f0eeec]"></div>
+				<div class="w-px h-5 bg-surface-100"></div>
 
 				<button
-					class="px-3 py-[5px] rounded-lg border border-[#e7e5e4] bg-white text-[#44403c] text-[12px] font-medium hover:bg-[#fafaf9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+					class="px-3 py-[5px] rounded-lg border border-surface-200 bg-white text-surface-700 text-[12px] font-medium hover:bg-surface-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
 					onclick={() => (insertModalOpen = true)}
 					disabled={awaitingAnchor}
 				>
@@ -797,7 +797,7 @@
 				</button>
 
 				<button
-					class="px-3 py-[5px] rounded-lg border border-[#c7d2fe] bg-[#eef2ff] text-[#4f46e5] text-[12px] font-medium hover:bg-[#e0e7ff] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+					class="px-3 py-[5px] rounded-lg border border-primary-200 bg-primary-50 text-primary-600 text-[12px] font-medium hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
 					onclick={suggestSplits}
 					disabled={suggesting ||
 						awaitingAnchor ||
@@ -809,7 +809,7 @@
 
 				{#if selectedToExclude.length > 0}
 					<button
-						class="px-3 py-[5px] rounded-lg border border-[#fecaca] bg-[#fef2f2] text-[#ef4444] text-[12px] font-medium hover:bg-[#fee2e2] transition-colors cursor-pointer"
+						class="px-3 py-[5px] rounded-lg border border-error-200 bg-error-50 text-error-500 text-[12px] font-medium hover:bg-error-100 transition-colors cursor-pointer"
 						onclick={excludeSelected}
 						title="Exclude selected pages (Delete)"
 					>
@@ -819,7 +819,7 @@
 
 				<button
 					class="px-3.5 py-[5px] rounded-lg border-none text-white text-[12px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-					style="background: linear-gradient(135deg, #6366f1, #818cf8)"
+					style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-400))"
 					onclick={handleExport}
 					disabled={!hasEdits ||
 						exporting ||
@@ -833,8 +833,8 @@
 				</button>
 
 				{#if awaitingAnchor && pendingInsert}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
-					<span class="text-[12px] text-[#78716c]" role="status">
+					<div class="w-px h-5 bg-surface-100"></div>
+					<span class="text-[12px] text-surface-500" role="status">
 						Click a gutter to insert {pendingInsert
 							.selectedPageIndices.length} page{pendingInsert
 							.selectedPageIndices.length === 1
@@ -844,8 +844,8 @@
 				{/if}
 
 				{#if splitPoints.size > 0 || deletedPages.size > 0}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
-					<span class="text-[11px] text-[#a8a29e]">
+					<div class="w-px h-5 bg-surface-100"></div>
+					<span class="text-[11px] text-surface-400">
 						{#if splitPoints.size > 0}
 							{splitPoints.size} split → {fileCount} file{fileCount ===
 							1
@@ -862,9 +862,9 @@
 				{/if}
 
 				{#if hasEdits && effectivePageCount === 0}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<div class="w-px h-5 bg-surface-100"></div>
 					<span
-						class="text-[12px] text-[#ef4444] font-medium"
+						class="text-[12px] text-error-500 font-medium"
 						role="alert"
 					>
 						All pages excluded
@@ -872,9 +872,9 @@
 				{/if}
 
 				{#if exportError}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<div class="w-px h-5 bg-surface-100"></div>
 					<span
-						class="text-[12px] text-[#ef4444] font-medium"
+						class="text-[12px] text-error-500 font-medium"
 						role="alert"
 					>
 						Export failed: {exportError}
@@ -882,17 +882,17 @@
 				{/if}
 
 				{#if suggestError}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<div class="w-px h-5 bg-surface-100"></div>
 					<span
-						class="text-[12px] text-[#ef4444] font-medium"
+						class="text-[12px] text-error-500 font-medium"
 						role="alert"
 					>
 						{suggestError}
 					</span>
 				{:else if suggestNotice}
-					<div class="w-px h-5 bg-[#f0eeec]"></div>
+					<div class="w-px h-5 bg-surface-100"></div>
 					<span
-						class="text-[12px] text-[#6366f1] font-medium"
+						class="text-[12px] text-primary-500 font-medium"
 						role="status"
 					>
 						{suggestNotice}
@@ -915,10 +915,10 @@
 				aria-label="Insert pages before page 1"
 			>
 				<span
-					class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-[#6366f1] opacity-80"
+					class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-primary-500 opacity-80"
 				></span>
 				<span
-					class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-[#6366f1] text-white"
+					class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-primary-500 text-white"
 					>+</span
 				>
 			</button>
@@ -954,8 +954,8 @@
 							class="absolute top-1.5 right-1.5 z-10 w-[28px] h-[28px] rounded-full border-none flex items-center justify-center text-white shadow-md transition-all duration-150 cursor-pointer {deletedPages.has(
 								position,
 							)
-								? 'opacity-100 bg-[#22c55e]'
-								: 'opacity-0 group-hover:opacity-100 bg-[#ef4444]'}"
+								? 'opacity-100 bg-success-500'
+								: 'opacity-0 group-hover:opacity-100 bg-error-500'}"
 							onclick={() => toggleDeletedPage(position)}
 							title={deletedPages.has(position)
 								? `Include page ${position + 1}`
@@ -1032,7 +1032,7 @@
 						class="thumbnail {splitMode
 							? 'w-full flex justify-center page-card cursor-pointer'
 							: ''} {splitMode && selectedPositions.has(position)
-							? 'outline-2 outline-offset-2 outline-[#6366f1]'
+							? 'outline-2 outline-offset-2 outline-primary-500'
 							: ''}"
 						class:page-card-deleted={splitMode &&
 							deletedPages.has(position)}
@@ -1068,8 +1068,8 @@
 							class="text-[11px] mt-1.5 font-mono {deletedPages.has(
 								position,
 							)
-								? 'line-through text-[#fca5a5]'
-								: 'text-[#a8a29e]'}"
+								? 'line-through text-error-300'
+								: 'text-surface-400'}"
 						>
 							{position + 1}
 						</div>
@@ -1083,10 +1083,10 @@
 						aria-label="Insert pages after page {position + 1}"
 					>
 						<span
-							class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-[#6366f1] opacity-80"
+							class="w-0 h-full min-h-[40px] border-l-2 border-dashed border-primary-500 opacity-80"
 						></span>
 						<span
-							class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-[#6366f1] text-white"
+							class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center shadow-md bg-primary-500 text-white"
 							>+</span
 						>
 					</button>
@@ -1100,15 +1100,15 @@
 							class="w-0 h-full min-h-[40px] border-l-2 transition-all duration-150 {splitPoints.has(
 								position,
 							)
-								? 'border-solid border-[#6366f1] opacity-100'
-								: 'border-dashed border-[#ddd6fe] opacity-80 group-hover:border-[#6366f1] group-hover:opacity-100'}"
+								? 'border-solid border-primary-500 opacity-100'
+								: 'border-dashed border-primary-200 opacity-80 group-hover:border-primary-500 group-hover:opacity-100'}"
 						></span>
 						<span
-							class="absolute text-base rounded-full w-[26px] h-[26px] flex items-center justify-center transition-all duration-150 {splitPoints.has(
+							class="absolute text-sm rounded-full w-[26px] h-[26px] flex items-center justify-center transition-all duration-150 {splitPoints.has(
 								position,
 							)
-								? 'bg-[#6366f1] text-white shadow-[0_1px_6px_rgba(99,102,241,0.5)]'
-								: 'bg-white text-[#a8a29e] shadow-[0_1px_4px_rgba(0,0,0,0.1)] group-hover:text-[#6366f1] group-hover:shadow-[0_1px_4px_rgba(99,102,241,0.3)]'}"
+								? 'bg-primary-500 text-white shadow-[0_1px_6px_color-mix(in_oklab,var(--color-primary-500)_50%,transparent)]'
+								: 'bg-white text-surface-400 shadow-[0_1px_4px_rgba(0,0,0,0.1)] group-hover:text-primary-500 group-hover:shadow-[0_1px_4px_color-mix(in_oklab,var(--color-primary-500)_30%,transparent)]'}"
 							>&#9986;</span
 						>
 					</button>
@@ -1153,7 +1153,7 @@
 
 	.page-card {
 		background: white;
-		border: 1px solid #f0eeec;
+		border: 1px solid var(--color-surface-100);
 		border-radius: 6px;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
@@ -1161,20 +1161,24 @@
 	}
 
 	.group:hover .page-card:not(.page-card-deleted) {
-		border-color: #c4b5fd;
+		border-color: var(--color-primary-300);
 		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 	}
 
 	.page-card-deleted {
 		position: relative;
-		border-color: #fecaca;
+		border-color: var(--color-error-200);
 	}
 
 	.page-card-deleted::before {
 		content: "";
 		position: absolute;
 		inset: 0;
-		background: rgba(254, 226, 226, 0.55);
+		background: color-mix(
+			in oklab,
+			var(--color-error-100) 55%,
+			transparent
+		);
 		pointer-events: none;
 		z-index: 4;
 	}
@@ -1186,7 +1190,7 @@
 		left: 12%;
 		width: 76%;
 		height: 2px;
-		background: #ef4444;
+		background: var(--color-error-500);
 		border-radius: 1px;
 		transform: translateY(-50%) rotate(-22deg);
 		transform-origin: center;

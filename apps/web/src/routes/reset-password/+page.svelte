@@ -3,6 +3,7 @@
 	import { resolve } from "$app/paths";
 	import { onMount } from "svelte";
 	import { Steps } from "@skeletonlabs/skeleton-svelte";
+	import StepIndicator from "$lib/components/StepIndicator.svelte";
 	import { apiFetch } from "$lib/services/api.js";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import type { AuthUser } from "$lib/types.js";
@@ -167,39 +168,7 @@
 		</div>
 
 		<Steps {step} count={3} linear class="w-full">
-			<Steps.List class="mb-8">
-				{#each stepTitles as title, index (title)}
-					<Steps.Item {index} class="flex-1">
-						<Steps.Trigger
-							class="flex flex-col items-center gap-1 w-full"
-						>
-							<Steps.Indicator
-								class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
-								{step > index
-									? 'preset-filled-success-500'
-									: step === index
-										? 'preset-filled-primary-500'
-										: 'preset-outlined-surface-500'}"
-							>
-								{#if step > index}
-									✓
-								{:else}
-									{index + 1}
-								{/if}
-							</Steps.Indicator>
-							<span
-								class="text-xs text-surface-500 hidden sm:block"
-								>{title}</span
-							>
-						</Steps.Trigger>
-						{#if index < stepTitles.length - 1}
-							<Steps.Separator
-								class="h-px bg-surface-300 flex-1 mt-4"
-							/>
-						{/if}
-					</Steps.Item>
-				{/each}
-			</Steps.List>
+			<StepIndicator {step} titles={stepTitles} />
 
 			<!-- Step 0: Email -->
 			<Steps.Content index={0}>
@@ -286,7 +255,7 @@
 						</button>
 					</form>
 
-					<p class="text-xs text-surface-500 mt-4 text-center">
+					<p class="text-xs text-surface-500 mt-6 text-center">
 						Didn't receive it?
 						<button
 							class="underline"

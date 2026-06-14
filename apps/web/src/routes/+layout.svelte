@@ -14,14 +14,14 @@
 	auth.initialize(untrack(() => data.user));
 </script>
 
-<div class="flex h-screen bg-[#fafaf9]">
+<div class="flex h-screen bg-surface-50">
 	<Navigation layout="sidebar">
 		<Navigation.Header>
 			<div class="px-4 pt-5 pb-3">
 				<div class="flex items-center gap-2">
 					<div
 						class="w-[30px] h-[30px] rounded-lg flex items-center justify-center"
-						style="background: linear-gradient(135deg, #6366f1, #818cf8)"
+						style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-400))"
 					>
 						<svg
 							width="14"
@@ -48,12 +48,12 @@
 						</svg>
 					</div>
 					<span
-						class="font-bold text-[13px] tracking-tight text-[#1c1917]"
+						class="font-bold text-[13px] tracking-tight text-surface-900"
 						>PDF Viewer</span
 					>
 				</div>
 			</div>
-			<div class="mx-4 h-px bg-[#e7e5e4]"></div>
+			<div class="mx-4 my-2 h-px bg-surface-200"></div>
 		</Navigation.Header>
 		<Navigation.Content>
 			{#if sidebarStore.component}
@@ -62,13 +62,13 @@
 			{/if}
 		</Navigation.Content>
 		<Navigation.Footer>
-			<div class="p-4 border-t border-[#e7e5e4]">
+			<div class="p-4 border-t border-surface-200">
 				{#if auth.isAuthenticated}
-					<p class="text-[11px] text-[#a8a29e] truncate mb-2">
+					<p class="text-[11px] text-surface-400 truncate mb-2">
 						{auth.user?.email}
 					</p>
 					<button
-						class="w-full py-[7px] rounded-lg border border-[#e7e5e4] bg-white text-[#78716c] text-[12px] font-medium hover:bg-[#f5f5f4] transition-colors"
+						class="w-full py-[7px] rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium hover:bg-surface-100 transition-colors"
 						onclick={async () => {
 							await auth.logout();
 							goto(resolve("/"));
@@ -80,14 +80,14 @@
 					<div class="flex flex-col gap-2">
 						<a
 							href={resolve("/login")}
-							class="w-full py-[7px] rounded-lg border border-[#e7e5e4] bg-white text-[#78716c] text-[12px] font-medium text-center hover:bg-[#f5f5f4] transition-colors"
+							class="w-full py-[7px] rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium text-center hover:bg-surface-100 transition-colors"
 						>
 							Log In
 						</a>
 						<a
 							href={resolve("/signup")}
 							class="w-full py-[7px] rounded-lg border-none text-white text-[12px] font-medium text-center"
-							style="background: linear-gradient(135deg, #6366f1, #818cf8)"
+							style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-400))"
 						>
 							Sign Up
 						</a>
@@ -96,7 +96,7 @@
 			</div>
 		</Navigation.Footer>
 	</Navigation>
-	<main class="flex-1 overflow-y-auto bg-[#fafaf9]">
+	<main class="flex-1 overflow-y-auto bg-surface-50">
 		{@render children()}
 	</main>
 </div>
