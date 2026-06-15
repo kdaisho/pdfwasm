@@ -128,3 +128,25 @@
 [data-scope="toast"][data-part="close-trigger"]:hover {
 	@apply preset-tonal;
 }
+
+/* Tint the close (X) to match the toast type — the X is stroke=currentColor,
+   so a color on the trigger carries through. */
+[data-scope="toast"][data-part="root"][data-type="info"]
+	[data-part="close-trigger"] {
+	@apply text-primary-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="success"]
+	[data-part="close-trigger"] {
+	@apply text-success-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="warning"]
+	[data-part="close-trigger"] {
+	@apply text-warning-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"]
+	[data-part="close-trigger"] {
+	@apply text-error-700-300;
+}
