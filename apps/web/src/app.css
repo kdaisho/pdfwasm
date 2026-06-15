@@ -16,3 +16,137 @@
 	flex: 1;
 	overflow-y: auto;
 }
+
+/* Toast styling. Vendored from @skeletonlabs/skeleton-common/src/components/toast.css
+   so we load only the toast styles (the app hand-styles Skeleton components here
+   rather than importing skeleton-common globally). Re-sync if the package updates. */
+[data-scope="toast"][data-part="root"] {
+	translate: var(--x) var(--y);
+	scale: var(--scale);
+	z-index: var(--z-index);
+	height: var(--height);
+	opacity: var(--opacity);
+	will-change: translate, opacity, scale;
+	transition:
+		translate 400ms,
+		scale 400ms,
+		opacity 400ms;
+	transition-timing-function: cubic-bezier(0.21, 1.02, 0.73, 1);
+	padding: --spacing(3);
+	width: 100%;
+	max-width: --spacing(96);
+	display: flex;
+	align-items: center;
+	gap: --spacing(2);
+	border: 1px solid var(--color-surface-200-800);
+
+	@apply card preset-filled-surface-50-950;
+}
+
+[data-scope="toast"][data-part="root"][data-state="closed"] {
+	transition:
+		translate 400ms,
+		scale 400ms,
+		opacity 200ms;
+	transition-timing-function: cubic-bezier(0.06, 0.71, 0.55, 1);
+}
+
+/* Type is signaled by the title's font color and a matching border on the
+   neutral surface — no filled backgrounds, so a stack of toasts stays calm.
+   Paired tokens keep contrast in both light and dark themes; the border uses
+   a softer shade than the title so the title stays the primary signal. */
+[data-scope="toast"][data-part="root"][data-type="info"] {
+	border-color: light-dark(
+		var(--color-primary-500),
+		var(--color-primary-400)
+	);
+}
+
+[data-scope="toast"][data-part="root"][data-type="info"] [data-part="title"] {
+	@apply text-primary-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="success"] {
+	border-color: light-dark(
+		var(--color-success-500),
+		var(--color-success-400)
+	);
+}
+
+[data-scope="toast"][data-part="root"][data-type="success"]
+	[data-part="title"] {
+	@apply text-success-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="warning"] {
+	border-color: light-dark(
+		var(--color-warning-500),
+		var(--color-warning-400)
+	);
+}
+
+[data-scope="toast"][data-part="root"][data-type="warning"]
+	[data-part="title"] {
+	@apply text-warning-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"] {
+	border-color: light-dark(var(--color-error-500), var(--color-error-400));
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"] [data-part="title"] {
+	@apply text-error-700-300;
+}
+
+[data-scope="toast"][data-part="group"] {
+	width: calc(
+		100% - (var(--viewport-offset-left) + var(--viewport-offset-right))
+	);
+}
+
+[data-scope="toast"][data-part="message"] {
+	flex: 1;
+}
+
+[data-scope="toast"][data-part="title"] {
+	font-weight: 500;
+	font-size: var(--text-sm);
+}
+
+[data-scope="toast"][data-part="description"] {
+	font-size: var(--text-sm);
+}
+
+[data-scope="toast"][data-part="action-trigger"] {
+	@apply btn preset-filled;
+}
+
+[data-scope="toast"][data-part="close-trigger"] {
+	@apply btn-icon;
+}
+
+[data-scope="toast"][data-part="close-trigger"]:hover {
+	@apply preset-tonal;
+}
+
+/* Tint the close (X) to match the toast type — the X is stroke=currentColor,
+   so a color on the trigger carries through. */
+[data-scope="toast"][data-part="root"][data-type="info"]
+	[data-part="close-trigger"] {
+	@apply text-primary-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="success"]
+	[data-part="close-trigger"] {
+	@apply text-success-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="warning"]
+	[data-part="close-trigger"] {
+	@apply text-warning-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"]
+	[data-part="close-trigger"] {
+	@apply text-error-700-300;
+}

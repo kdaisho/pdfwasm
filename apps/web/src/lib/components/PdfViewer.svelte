@@ -18,6 +18,7 @@
 	} from "$lib/services/splitPdf";
 	import { suggestSplitPoints } from "$lib/services/suggestSplits";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { toaster } from "$lib/stores/toaster";
 	import PdfPage from "./PdfPage.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import AuthModal from "./AuthModal.svelte";
@@ -59,16 +60,10 @@
 	let splitPoints = new SvelteSet<number>();
 	let deletedPages = new SvelteSet<number>();
 	let exporting = $state(false);
-	let exportError: string | null = $state(null);
 
 	// AI-suggested split points (KDA-53). The model proposes boundaries the user
 	// reviews and tweaks before exporting — never an auto-export.
 	let suggesting = $state(false);
-	let suggestError: string | null = $state(null);
-	// Transient status after a suggestion (incl. "found nothing", so a no-op
-	// result doesn't read as a broken button).
-	let suggestNotice: string | null = $state(null);
-	let suggestNoticeTimer: ReturnType<typeof setTimeout> | undefined;
 	// Leading chars per page sent to the model; the server truncates again.
 	const SUGGEST_SNIPPET_LEN = 400;
 
@@ -251,15 +246,6 @@
 			sources.some((s) => s.encrypted && usedSourceIds.has(s.id)),
 	);
 
-	// Clear a stale export error when the edit set changes — e.g. after
-	// excluding the page that came from an encrypted source.
-	$effect(() => {
-		deletedPages.size;
-		insertedPages.length;
-		splitPoints.size;
-		exportError = null;
-	});
-
 	let fileCount = $derived(
 		computeSegmentPositions(
 			combinedSequence.length,
@@ -436,9 +422,6 @@
 	async function suggestSplits() {
 		if (suggesting || awaitingAnchor || combinedSequence.length < 2) return;
 		suggesting = true;
-		suggestError = null;
-		suggestNotice = null;
-		clearTimeout(suggestNoticeTimer);
 		try {
 			const payload = combinedSequence.map((ref, position) => {
 				const pageData = resolvePageData(ref);
@@ -474,14 +457,20 @@
 			}
 
 			const count = splitPoints.size;
-			suggestNotice =
-				count > 0
-					? `Suggested ${count} split${count === 1 ? "" : "s"} — review and adjust`
-					: "No split points found";
-			suggestNoticeTimer = setTimeout(() => (suggestNotice = null), 5000);
+			if (count > 0) {
+				toaster.success({
+					title: `Suggested ${count} split${count === 1 ? "" : "s"}`,
+					description: "Review and adjust before exporting.",
+				});
+			} else {
+				toaster.info({ title: "No split points found" });
+			}
 		} catch (e) {
-			suggestError =
-				e instanceof Error ? e.message : "Couldn’t suggest splits";
+			toaster.error({
+				title: "Couldn't suggest splits",
+				description:
+					e instanceof Error ? e.message : "Please try again.",
+			});
 		} finally {
 			suggesting = false;
 		}
@@ -557,7 +546,6 @@
 	async function doExport() {
 		if (!hasEdits || exporting || effectivePageCount === 0) return;
 		exporting = true;
-		exportError = null;
 		try {
 			const sequence: SequenceEntry[] = combinedSequence.map((ref) =>
 				ref.kind === "original"
@@ -599,7 +587,11 @@
 			});
 			await downloadSplitPdfs(segments, sourceFilename);
 		} catch (err: unknown) {
-			exportError = err instanceof Error ? err.message : "Export failed";
+			toaster.error({
+				title: "Export failed",
+				description:
+					err instanceof Error ? err.message : "Please try again.",
+			});
 		} finally {
 			exporting = false;
 		}
@@ -868,34 +860,6 @@
 						role="alert"
 					>
 						All pages excluded
-					</span>
-				{/if}
-
-				{#if exportError}
-					<div class="w-px h-5 bg-surface-100"></div>
-					<span
-						class="text-[12px] text-error-500 font-medium"
-						role="alert"
-					>
-						Export failed: {exportError}
-					</span>
-				{/if}
-
-				{#if suggestError}
-					<div class="w-px h-5 bg-surface-100"></div>
-					<span
-						class="text-[12px] text-error-500 font-medium"
-						role="alert"
-					>
-						{suggestError}
-					</span>
-				{:else if suggestNotice}
-					<div class="w-px h-5 bg-surface-100"></div>
-					<span
-						class="text-[12px] text-primary-500 font-medium"
-						role="status"
-					>
-						{suggestNotice}
 					</span>
 				{/if}
 			</div>
