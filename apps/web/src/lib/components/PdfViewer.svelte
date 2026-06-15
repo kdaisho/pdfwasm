@@ -476,8 +476,6 @@
 		}
 	}
 
-	toaster.error({ title: "No split points found" });
-
 	function toggleDeletedPage(position: number) {
 		// If this page is part of a multi-selection, the ✕ toggles the whole
 		// selection at once; otherwise just this page (the original behavior).
