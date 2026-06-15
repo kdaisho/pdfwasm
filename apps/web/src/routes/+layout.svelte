@@ -6,6 +6,7 @@
 	import { Navigation } from "@skeletonlabs/skeleton-svelte";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
+	import Toaster from "$lib/components/Toaster.svelte";
 
 	let { data, children } = $props();
 
@@ -100,3 +101,5 @@
 		{@render children()}
 	</main>
 </div>
+
+<Toaster />
