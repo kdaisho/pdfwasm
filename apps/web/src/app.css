@@ -51,16 +51,25 @@
 	transition-timing-function: cubic-bezier(0.06, 0.71, 0.55, 1);
 }
 
-[data-scope="toast"][data-part="root"][data-type="success"] {
-	@apply preset-filled-success-500;
+/* Type is signaled by the title's font color on the neutral surface — no
+   filled backgrounds, so a stack of toasts stays calm. Paired tokens keep
+   contrast in both light and dark themes. */
+[data-scope="toast"][data-part="root"][data-type="info"] [data-part="title"] {
+	@apply text-primary-700-300;
 }
 
-[data-scope="toast"][data-part="root"][data-type="warning"] {
-	@apply preset-filled-warning-500;
+[data-scope="toast"][data-part="root"][data-type="success"]
+	[data-part="title"] {
+	@apply text-success-700-300;
 }
 
-[data-scope="toast"][data-part="root"][data-type="error"] {
-	@apply preset-filled-error-500;
+[data-scope="toast"][data-part="root"][data-type="warning"]
+	[data-part="title"] {
+	@apply text-warning-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"] [data-part="title"] {
+	@apply text-error-700-300;
 }
 
 [data-scope="toast"][data-part="group"] {
