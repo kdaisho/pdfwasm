@@ -7,5 +7,5 @@ import { createToaster } from "@skeletonlabs/skeleton-svelte";
 // top-end keeps toasts clear of the centered action bar and page content.
 export const toaster = createToaster({
 	placement: "top-end",
-	duration: 6000,
+	duration: 26000,
 });

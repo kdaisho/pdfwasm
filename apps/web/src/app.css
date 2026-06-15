@@ -51,11 +51,26 @@
 	transition-timing-function: cubic-bezier(0.06, 0.71, 0.55, 1);
 }
 
-/* Type is signaled by the title's font color on the neutral surface — no
-   filled backgrounds, so a stack of toasts stays calm. Paired tokens keep
-   contrast in both light and dark themes. */
+/* Type is signaled by the title's font color and a matching border on the
+   neutral surface — no filled backgrounds, so a stack of toasts stays calm.
+   Paired tokens keep contrast in both light and dark themes; the border uses
+   a softer shade than the title so the title stays the primary signal. */
+[data-scope="toast"][data-part="root"][data-type="info"] {
+	border-color: light-dark(
+		var(--color-primary-500),
+		var(--color-primary-400)
+	);
+}
+
 [data-scope="toast"][data-part="root"][data-type="info"] [data-part="title"] {
 	@apply text-primary-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="success"] {
+	border-color: light-dark(
+		var(--color-success-500),
+		var(--color-success-400)
+	);
 }
 
 [data-scope="toast"][data-part="root"][data-type="success"]
@@ -63,9 +78,20 @@
 	@apply text-success-700-300;
 }
 
+[data-scope="toast"][data-part="root"][data-type="warning"] {
+	border-color: light-dark(
+		var(--color-warning-500),
+		var(--color-warning-400)
+	);
+}
+
 [data-scope="toast"][data-part="root"][data-type="warning"]
 	[data-part="title"] {
 	@apply text-warning-700-300;
+}
+
+[data-scope="toast"][data-part="root"][data-type="error"] {
+	border-color: light-dark(var(--color-error-500), var(--color-error-400));
 }
 
 [data-scope="toast"][data-part="root"][data-type="error"] [data-part="title"] {
