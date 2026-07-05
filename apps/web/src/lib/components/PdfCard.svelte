@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PdfDocumentMeta } from "$lib/services/pdf-api";
 	import { formatDate, formatFileSize } from "$lib/utils/format";
-	import XIcon from "./icons/XIcon.svelte";
+	import DeleteWithConfirmation from "./DeleteWithConfirmation.svelte";
 	import PdfCover from "./PdfCover.svelte";
 
 	interface Props {
@@ -41,16 +41,9 @@
 		{formatFileSize(pdf.fileSize)} · {formatDate(pdf.uploadedAt)}
 	</div>
 
-	<button
-		type="button"
-		class="absolute right-1.5 top-1.5 flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-full border-none bg-error-500 text-[13px] font-bold text-white opacity-0 shadow-md transition-opacity duration-150 hover:bg-error-600 group-hover:opacity-100"
-		title="Delete {pdf.filename}"
-		aria-label="Delete {pdf.filename}"
-		onclick={(e) => {
-			e.stopPropagation();
-			onDelete(pdf);
-		}}
-	>
-		<XIcon size={11} />
-	</button>
+	<DeleteWithConfirmation
+		label={pdf.filename}
+		onConfirm={() => onDelete(pdf)}
+		class="absolute right-1.5 top-1.5 h-[22px] w-[22px] opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
+	/>
 </div>
