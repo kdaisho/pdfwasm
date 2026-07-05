@@ -7,6 +7,7 @@
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import { downloadPdf, setLastPdf, uploadPdf } from "$lib/services/pdf-api";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
 	import type { PageData as PdfPageData } from "$lib/types";
 
@@ -39,7 +40,14 @@
 			]);
 			library = lib;
 
-			if (lastPdfBytes) {
+			// A selection handed off from the library picker takes precedence over
+			// the last-opened PDF; consumed once so a refresh falls back to lastPdf.
+			const pending = pendingPdfStore.take();
+			if (pending?.type === "saved") {
+				await loadFromServer(pending.id, pending.filename);
+			} else if (pending?.type === "file") {
+				await loadFile(pending.file);
+			} else if (lastPdfBytes) {
 				uploadStatus = "saved";
 				pdfFilename = data.lastPdfFilename;
 				await loadPdfBytes(lastPdfBytes);
@@ -168,8 +176,6 @@
 				splitMode = !splitMode;
 			},
 			showSplit: pages.length > 0,
-			onSelectPdf: (id: string, filename: string) =>
-				loadFromServer(id, filename),
 			uploadStatus,
 			uploadError,
 			docLoading,
