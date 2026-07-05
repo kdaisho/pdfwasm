@@ -28,6 +28,7 @@
 		onclick={() => onOpen(pdf)}
 	>
 		<PdfCover
+			id={pdf.id}
 			filename={pdf.filename}
 			class="aspect-[1/1.3] w-full rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
 		/>
