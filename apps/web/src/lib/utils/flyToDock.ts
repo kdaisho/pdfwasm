@@ -22,7 +22,7 @@ export function flyToDock(source: HTMLElement, target: HTMLElement): void {
 		pointerEvents: "none",
 		willChange: "transform",
 		transition:
-			"transform 0.58s cubic-bezier(0.5,0.05,0.2,1), box-shadow 0.58s ease",
+			"transform 0.35s cubic-bezier(0.5,0.05,0.2,1), box-shadow 0.35s ease",
 		// Elevation shadows for the in-flight card — functional animation values,
 		// not theme surfaces.
 		boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
@@ -55,5 +55,5 @@ export function flyToDock(source: HTMLElement, target: HTMLElement): void {
 		if (e.propertyName === "transform") settle();
 	});
 	// Safety net in case transitionend doesn't fire.
-	setTimeout(settle, 700);
+	setTimeout(settle, 450);
 }

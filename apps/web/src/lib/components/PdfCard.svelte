@@ -16,23 +16,26 @@
 	let coverEl: HTMLElement | undefined = $state();
 </script>
 
-<div class="group relative flex flex-col text-left">
-	<button
-		type="button"
-		class="block cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 ease-out hover:-translate-y-[3px]"
-		onclick={() => coverEl && onOpen(pdf, coverEl)}
+<!-- The whole card is the click target so the pointer cursor and open action
+     are consistent across the cover and its filename/meta, not just the cover. -->
+<div
+	class="group relative flex cursor-pointer flex-col text-left"
+	role="button"
+	tabindex="0"
+	onclick={() => coverEl && onOpen(pdf, coverEl)}
+	onkeydown={(e) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			if (coverEl) onOpen(pdf, coverEl);
+		}
+	}}
+>
+	<div
+		bind:this={coverEl}
+		class="aspect-[1/1.3] w-full overflow-hidden rounded-lg shadow-md transition-[transform,box-shadow] duration-200 ease-out group-hover:-translate-y-[3px] group-hover:shadow-xl"
 	>
-		<div
-			bind:this={coverEl}
-			class="aspect-[1/1.3] w-full cursor-pointer overflow-hidden rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
-		>
-			<PdfCover
-				id={pdf.id}
-				filename={pdf.filename}
-				class="h-full w-full"
-			/>
-		</div>
-	</button>
+		<PdfCover id={pdf.id} filename={pdf.filename} class="h-full w-full" />
+	</div>
 
 	<div class="mt-3 truncate text-[12.5px] font-semibold text-surface-700">
 		{pdf.filename}
