@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PdfDocumentMeta } from "$lib/services/pdf-api";
 	import { formatDate, formatFileSize } from "$lib/utils/format";
+	import XIcon from "./icons/XIcon.svelte";
 	import PdfCover from "./PdfCover.svelte";
 
 	interface Props {
@@ -23,7 +24,7 @@
 	>
 		<div
 			bind:this={coverEl}
-			class="aspect-[1/1.3] w-full overflow-hidden rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
+			class="aspect-[1/1.3] w-full cursor-pointer overflow-hidden rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
 		>
 			<PdfCover
 				id={pdf.id}
@@ -50,6 +51,6 @@
 			onDelete(pdf);
 		}}
 	>
-		×
+		<XIcon size={11} />
 	</button>
 </div>
