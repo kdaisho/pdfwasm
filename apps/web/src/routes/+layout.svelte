@@ -6,6 +6,7 @@
 	import { Navigation } from "@skeletonlabs/skeleton-svelte";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
+	import NowViewingDock from "$lib/components/NowViewingDock.svelte";
 	import Toaster from "$lib/components/Toaster.svelte";
 
 	let { data, children } = $props();
@@ -61,6 +62,7 @@
 				{@const SidebarComp = sidebarStore.component}
 				<SidebarComp {...sidebarStore.props} />
 			{/if}
+			<NowViewingDock />
 		</Navigation.Content>
 		<Navigation.Footer>
 			<div class="p-4 border-t border-surface-200">

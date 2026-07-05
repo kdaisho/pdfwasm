@@ -5,7 +5,7 @@
 // request here and navigates to /, where the viewer takes it once on mount.
 // A saved PDF is referenced by id; a freshly opened local file is passed by value.
 export type PendingPdf =
-	| { type: "saved"; id: string; filename: string }
+	| { type: "saved"; id: string; filename: string; subtitle: string }
 	| { type: "file"; file: File };
 
 let pending = $state<PendingPdf | null>(null);

@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { onDestroy, untrack } from "svelte";
+	import { onDestroy, tick, untrack } from "svelte";
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import PdfCard from "$lib/components/PdfCard.svelte";
 	import PdfLibrarySidebar from "$lib/components/PdfLibrarySidebar.svelte";
 	import { deletePdf, type PdfDocumentMeta } from "$lib/services/pdf-api";
+	import { currentPdfStore } from "$lib/stores/currentPdf.svelte.js";
 	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
+	import { formatDate, formatFileSize } from "$lib/utils/format";
+	import { flyToDock } from "$lib/utils/flyToDock";
 
 	let { data } = $props();
 
@@ -15,12 +18,25 @@
 	let pdfs = $state<PdfDocumentMeta[]>(untrack(() => data.pdfs));
 	let deleteError = $state<string | null>(null);
 
-	function openPdf(pdf: PdfDocumentMeta) {
+	async function openPdf(pdf: PdfDocumentMeta, cover: HTMLElement) {
+		const subtitle = `${formatFileSize(pdf.fileSize)} · ${formatDate(pdf.uploadedAt)}`;
+
+		// Populate the dock now so it's mounted as the flight's landing target;
+		// the viewer re-affirms it from the pending request after navigation.
+		currentPdfStore.set({ id: pdf.id, filename: pdf.filename, subtitle });
 		pendingPdfStore.request({
 			type: "saved",
 			id: pdf.id,
 			filename: pdf.filename,
+			subtitle,
 		});
+
+		await tick();
+		const target = document.querySelector<HTMLElement>(
+			"[data-now-viewing-cover]",
+		);
+		if (target) flyToDock(cover, target);
+
 		goto(resolve("/"));
 	}
 

@@ -1,44 +1,43 @@
 <script lang="ts">
 	import type { PdfDocumentMeta } from "$lib/services/pdf-api";
+	import { formatDate, formatFileSize } from "$lib/utils/format";
 	import PdfCover from "./PdfCover.svelte";
 
 	interface Props {
 		pdf: PdfDocumentMeta;
-		onOpen: (pdf: PdfDocumentMeta) => void;
+		/** `cover` is the DOM node to fly to the dock on open. */
+		onOpen: (pdf: PdfDocumentMeta, cover: HTMLElement) => void;
 		onDelete: (pdf: PdfDocumentMeta) => void;
 	}
 
 	let { pdf, onOpen, onDelete }: Props = $props();
 
-	function formatSize(bytes: number): string {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleDateString();
-	}
+	let coverEl: HTMLElement | undefined = $state();
 </script>
 
 <div class="group relative flex flex-col text-left">
 	<button
 		type="button"
 		class="block cursor-pointer border-none bg-transparent p-0 transition-transform duration-200 ease-out hover:-translate-y-[3px]"
-		onclick={() => onOpen(pdf)}
+		onclick={() => coverEl && onOpen(pdf, coverEl)}
 	>
-		<PdfCover
-			id={pdf.id}
-			filename={pdf.filename}
-			class="aspect-[1/1.3] w-full rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
-		/>
+		<div
+			bind:this={coverEl}
+			class="aspect-[1/1.3] w-full overflow-hidden rounded-lg shadow-md transition-shadow duration-200 group-hover:shadow-xl"
+		>
+			<PdfCover
+				id={pdf.id}
+				filename={pdf.filename}
+				class="h-full w-full"
+			/>
+		</div>
 	</button>
 
 	<div class="mt-3 truncate text-[12.5px] font-semibold text-surface-700">
 		{pdf.filename}
 	</div>
 	<div class="mt-[3px] font-mono text-[10.5px] text-surface-400">
-		{formatSize(pdf.fileSize)} · {formatDate(pdf.uploadedAt)}
+		{formatFileSize(pdf.fileSize)} · {formatDate(pdf.uploadedAt)}
 	</div>
 
 	<button
@@ -51,6 +50,6 @@
 			onDelete(pdf);
 		}}
 	>
-		x
+		×
 	</button>
 </div>
