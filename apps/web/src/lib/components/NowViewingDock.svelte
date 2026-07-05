@@ -7,9 +7,12 @@
 </script>
 
 {#if current}
+	<!-- Anchored to the bottom of the sidebar so its position is stable across
+	     routes and doesn't shift when the viewer's Edit Mode / Zoom controls
+	     render in — which is what the fly-to-dock animation lands on. -->
 	<a
 		href={resolve("/")}
-		class="mx-3 mt-3 block rounded-xl border border-surface-200 bg-white p-[9px] no-underline shadow-sm transition-colors hover:bg-surface-50"
+		class="mx-3 mb-3 mt-auto block rounded-xl border border-surface-200 bg-white p-[9px] no-underline shadow-sm transition-colors hover:bg-surface-50"
 	>
 		<div
 			class="mb-2 flex items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-surface-400"
