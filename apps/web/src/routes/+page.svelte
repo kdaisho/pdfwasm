@@ -7,7 +7,10 @@
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
 	import { downloadPdf, setLastPdf, uploadPdf } from "$lib/services/pdf-api";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { currentPdfStore } from "$lib/stores/currentPdf.svelte.js";
+	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
+	import { formatFileSize } from "$lib/utils/format";
 	import type { PageData as PdfPageData } from "$lib/types";
 
 	let { data } = $props();
@@ -39,9 +42,26 @@
 			]);
 			library = lib;
 
-			if (lastPdfBytes) {
+			// A selection handed off from the library picker takes precedence over
+			// the last-opened PDF; consumed once so a refresh falls back to lastPdf.
+			const pending = pendingPdfStore.take();
+			if (pending?.type === "saved") {
+				currentPdfStore.set({
+					id: pending.id,
+					filename: pending.filename,
+					subtitle: pending.subtitle,
+				});
+				await loadFromServer(pending.id, pending.filename);
+			} else if (pending?.type === "file") {
+				await loadFile(pending.file);
+			} else if (lastPdfBytes) {
 				uploadStatus = "saved";
 				pdfFilename = data.lastPdfFilename;
+				currentPdfStore.set({
+					id: data.lastPdfId,
+					filename: data.lastPdfFilename ?? "Document",
+					subtitle: null,
+				});
 				await loadPdfBytes(lastPdfBytes);
 			}
 		} catch (err: unknown) {
@@ -115,6 +135,11 @@
 		const uint8 = new Uint8Array(buffer);
 
 		pdfFilename = file.name;
+		currentPdfStore.set({
+			id: null,
+			filename: file.name,
+			subtitle: formatFileSize(file.size),
+		});
 		await loadPdfBytes(uint8);
 
 		if (auth.isAuthenticated) {
@@ -122,6 +147,14 @@
 			uploadPdf(file)
 				.then((meta) => {
 					uploadStatus = "saved";
+					// Now that it's saved, the dock can show its first-page thumbnail.
+					if (currentPdfStore.value?.filename === file.name) {
+						currentPdfStore.set({
+							id: meta.id,
+							filename: file.name,
+							subtitle: formatFileSize(file.size),
+						});
+					}
 					setLastPdf(meta.id).catch(() => {});
 				})
 				.catch((err: unknown) => {
@@ -168,8 +201,6 @@
 				splitMode = !splitMode;
 			},
 			showSplit: pages.length > 0,
-			onSelectPdf: (id: string, filename: string) =>
-				loadFromServer(id, filename),
 			uploadStatus,
 			uploadError,
 			docLoading,
@@ -207,6 +238,7 @@
 		docLoading = false;
 		uploadStatus = "idle";
 		uploadError = null;
+		currentPdfStore.clear();
 	}
 
 	onDestroy(() => {

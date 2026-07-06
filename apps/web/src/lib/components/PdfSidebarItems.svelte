@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import {
 		ZOOM_BASE_WIDTH,
 		ZOOM_MAX_WIDTH,
@@ -6,14 +7,12 @@
 		ZOOM_STEP,
 	} from "$lib/constants/zoom";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
-	import SavedPdfsPopover from "./SavedPdfsPopover.svelte";
 
 	interface Props {
 		onFileChange: (e: Event) => void;
 		splitMode: boolean;
 		onToggleSplit: () => void;
 		showSplit: boolean;
-		onSelectPdf: (id: string, filename: string) => void;
 		uploadStatus: "idle" | "uploading" | "saved" | "error";
 		uploadError: string | null;
 		docLoading: boolean;
@@ -30,7 +29,6 @@
 		splitMode,
 		onToggleSplit,
 		showSplit,
-		onSelectPdf,
 		uploadStatus,
 		uploadError,
 		docLoading,
@@ -128,7 +126,56 @@
 	{/if}
 
 	{#if auth.isAuthenticated}
-		<SavedPdfsPopover onSelect={onSelectPdf} />
+		<a
+			href={resolve("/library")}
+			class="flex items-center gap-2 w-full px-[10px] py-2 rounded-lg bg-transparent text-surface-500 text-[13px] font-medium hover:bg-surface-100 transition-colors no-underline"
+		>
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 14 14"
+				fill="none"
+				aria-hidden="true"
+			>
+				<rect
+					x="2"
+					y="2"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="8"
+					y="2"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="2"
+					y="8"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+				<rect
+					x="8"
+					y="8"
+					width="4"
+					height="4"
+					rx="1"
+					stroke="currentColor"
+					stroke-width="1.3"
+				/>
+			</svg>
+			My PDFs
+		</a>
 	{/if}
 </div>
 

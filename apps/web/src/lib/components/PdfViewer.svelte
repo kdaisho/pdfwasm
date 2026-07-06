@@ -20,6 +20,7 @@
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { toaster } from "$lib/stores/toaster";
 	import PdfPage from "./PdfPage.svelte";
+	import XIcon from "./icons/XIcon.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import AuthModal from "./AuthModal.svelte";
 	import InsertPagesModal, {
@@ -952,20 +953,7 @@
 									/>
 								</svg>
 							{:else}
-								<svg
-									width="12"
-									height="12"
-									viewBox="0 0 12 12"
-									fill="none"
-									aria-hidden="true"
-								>
-									<path
-										d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5"
-										stroke="currentColor"
-										stroke-width="1.8"
-										stroke-linecap="round"
-									/>
-								</svg>
+								<XIcon size={12} />
 							{/if}
 						</button>
 					{/if}

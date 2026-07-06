@@ -11,10 +11,12 @@ export const load: PageLoad = async ({ parent }) => {
 	const libraryPromise = getPdfiumLibrary();
 	const lastPdfPromise = user?.lastPdfId ? downloadPdf(user.lastPdfId) : null;
 	const lastPdfFilename = user?.lastPdfFilename ?? null;
+	const lastPdfId = user?.lastPdfId ?? null;
 
 	return {
 		libraryPromise,
 		lastPdfPromise,
 		lastPdfFilename,
+		lastPdfId,
 	};
 };
