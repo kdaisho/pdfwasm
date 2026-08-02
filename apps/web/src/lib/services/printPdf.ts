@@ -23,11 +23,17 @@ const LOAD_TIMEOUT_MS = 30_000;
 /**
  * Load `bytes` into a hidden frame and open the browser's native print dialog.
  *
+ * `title` names the print job — and so pre-fills the filename when the chosen
+ * destination is "Save as PDF". Physical printers ignore it.
+ *
  * Resolves once the dialog has been handed off — not when printing finishes,
  * since the browser gives no reliable signal for that. Rejects if the frame
  * fails to load or the browser refuses to print.
  */
-export function printPdfBytes(bytes: Uint8Array): Promise<void> {
+export function printPdfBytes(
+	bytes: Uint8Array,
+	options: { title?: string } = {},
+): Promise<void> {
 	const blob = new Blob([bytes], { type: "application/pdf" });
 	const url = URL.createObjectURL(blob);
 
@@ -40,10 +46,23 @@ export function printPdfBytes(bytes: Uint8Array): Promise<void> {
 	iframe.style.cssText =
 		"position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;";
 
+	// The browser names the print job from the *top-level* document title —
+	// not from the printed frame, and not from the blob URL — so swapping it
+	// around the print call is what controls the "Save as PDF" filename.
+	const previousTitle = document.title;
+	let titleRestored = options.title === undefined;
+	function restoreTitle() {
+		if (titleRestored) return;
+		titleRestored = true;
+		document.title = previousTitle;
+	}
+
 	let cleanedUp = false;
 	function cleanup() {
 		if (cleanedUp) return;
 		cleanedUp = true;
+		// Backstop in case no afterprint arrives, so the tab title can't stick.
+		restoreTitle();
 		iframe.remove();
 		URL.revokeObjectURL(url);
 	}
@@ -59,6 +78,22 @@ export function printPdfBytes(bytes: Uint8Array): Promise<void> {
 			try {
 				const frame = iframe.contentWindow;
 				if (!frame) throw new Error("Couldn't open the print preview.");
+
+				if (options.title !== undefined) document.title = options.title;
+				// afterprint lands on the printed frame in some browsers and on
+				// the top window in others; first one to fire wins, and the
+				// frame's plugin document may never fire at all.
+				window.addEventListener("afterprint", restoreTitle, {
+					once: true,
+				});
+				try {
+					frame.addEventListener("afterprint", restoreTitle, {
+						once: true,
+					});
+				} catch {
+					/* frame not listenable — window + cleanup still cover it */
+				}
+
 				// Focus first: some browsers print the top window instead of
 				// the frame when the frame isn't the active one.
 				frame.focus();

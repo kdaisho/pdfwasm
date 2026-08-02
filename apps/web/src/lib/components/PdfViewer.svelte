@@ -14,6 +14,7 @@
 		splitPdf,
 		downloadSplitPdfs,
 		computeSegmentPositions,
+		sanitizeBasename,
 		type SequenceEntry,
 	} from "$lib/services/splitPdf";
 	import { suggestSplitPoints } from "$lib/services/suggestSplits";
@@ -648,7 +649,11 @@
 		if (printing || effectivePageCount === 0) return;
 		printing = true;
 		try {
-			await printPdfBytes(await buildPrintBytes());
+			// Same basename Export uses, so "Save as PDF" pre-fills with the
+			// document's name instead of the app's <title>.
+			await printPdfBytes(await buildPrintBytes(), {
+				title: sanitizeBasename(sourceFilename),
+			});
 		} catch (err: unknown) {
 			toaster.error({
 				title: "Print failed",
