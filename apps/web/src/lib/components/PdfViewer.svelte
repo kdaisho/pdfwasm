@@ -14,12 +14,15 @@
 		splitPdf,
 		downloadSplitPdfs,
 		computeSegmentPositions,
+		sanitizeBasename,
 		type SequenceEntry,
 	} from "$lib/services/splitPdf";
 	import { suggestSplitPoints } from "$lib/services/suggestSplits";
+	import { printPdfBytes } from "$lib/services/printPdf";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { toaster } from "$lib/stores/toaster";
 	import PdfPage from "./PdfPage.svelte";
+	import PrintButton from "./PrintButton.svelte";
 	import XIcon from "./icons/XIcon.svelte";
 	import SearchBar from "./SearchBar.svelte";
 	import AuthModal from "./AuthModal.svelte";
@@ -61,6 +64,7 @@
 	let splitPoints = new SvelteSet<number>();
 	let deletedPages = new SvelteSet<number>();
 	let exporting = $state(false);
+	let printing = $state(false);
 
 	// AI-suggested split points (KDA-53). The model proposes boundaries the user
 	// reviews and tweaks before exporting — never an auto-export.
@@ -544,44 +548,55 @@
 		// Keep the selection so undoing a marker re-surfaces the button.
 	}
 
+	/**
+	 * The live sequence plus export-safe bytes for every source it actually
+	 * uses — shared by export and print so both assemble pages identically.
+	 *
+	 * Rejects encrypted *used* sources up front (naming the culprit);
+	 * `usedSourceIds` excludes sources whose pages were all removed, so
+	 * excluding an encrypted insert lets the operation proceed. pdf-lib can't
+	 * decrypt and would otherwise emit garbled pages.
+	 */
+	async function buildExportInputs(): Promise<{
+		sequence: SequenceEntry[];
+		sourceBytes: Map<string, Uint8Array>;
+	}> {
+		const sequence: SequenceEntry[] = combinedSequence.map((ref) =>
+			ref.kind === "original"
+				? { sourceId: "primary", pageIndex: ref.index }
+				: {
+						sourceId: ref.sourceId,
+						pageIndex: ref.sourcePageIndex,
+					},
+		);
+
+		const bytesById = new SvelteMap<string, Uint8Array>([
+			["primary", pdfBytes],
+			...sources.map((s) => [s.id, s.bytes] as const),
+		]);
+		const labelById = new SvelteMap<string, string>([
+			["primary", sourceFilename ?? "the main document"],
+			...sources.map((s) => [s.id, s.name] as const),
+		]);
+		const sourceBytes = new SvelteMap<string, Uint8Array>();
+		for (const id of usedSourceIds) {
+			sourceBytes.set(
+				id,
+				await normalizePdfBytes(bytesById.get(id)!, labelById.get(id)!),
+			);
+		}
+
+		return { sequence, sourceBytes };
+	}
+
 	async function doExport() {
 		if (!hasEdits || exporting || effectivePageCount === 0) return;
 		exporting = true;
 		try {
-			const sequence: SequenceEntry[] = combinedSequence.map((ref) =>
-				ref.kind === "original"
-					? { sourceId: "primary", pageIndex: ref.index }
-					: {
-							sourceId: ref.sourceId,
-							pageIndex: ref.sourcePageIndex,
-						},
-			);
-
-			// Reject encrypted *used* sources up front (naming the culprit);
-			// `usedSourceIds` excludes sources whose pages were all removed, so
-			// excluding an encrypted insert lets the export proceed.
-			// pdf-lib can't decrypt and would otherwise emit garbled pages.
-			const bytesById = new SvelteMap<string, Uint8Array>([
-				["primary", pdfBytes],
-				...sources.map((s) => [s.id, s.bytes] as const),
-			]);
-			const labelById = new SvelteMap<string, string>([
-				["primary", sourceFilename ?? "the main document"],
-				...sources.map((s) => [s.id, s.name] as const),
-			]);
-			const sourcesMap = new SvelteMap<string, Uint8Array>();
-			for (const id of usedSourceIds) {
-				sourcesMap.set(
-					id,
-					await normalizePdfBytes(
-						bytesById.get(id)!,
-						labelById.get(id)!,
-					),
-				);
-			}
+			const { sequence, sourceBytes } = await buildExportInputs();
 
 			const segments = await splitPdf({
-				sources: sourcesMap,
+				sources: sourceBytes,
 				sequence,
 				splitPoints: [...splitPoints],
 				excludedPositions: [...deletedPages],
@@ -605,6 +620,48 @@
 		} else {
 			pendingExport = true;
 			showAuthModal = true;
+		}
+	}
+
+	/**
+	 * Bytes for the *live* document: the current sequence with inserts kept and
+	 * excluded pages dropped. Split markers are deliberately ignored — they
+	 * decide how an export is chopped into files, but a print job is a single
+	 * document, so everything prints as one PDF.
+	 */
+	async function buildPrintBytes(): Promise<Uint8Array> {
+		// Untouched document: print the original bytes. Skipping the pdf-lib
+		// round-trip preserves fidelity and lets empty-password encrypted files
+		// print, since the browser's PDF viewer decrypts them like PDFium does.
+		if (!hasEdits) return pdfBytes;
+
+		const { sequence, sourceBytes } = await buildExportInputs();
+		const segments = await splitPdf({
+			sources: sourceBytes,
+			sequence,
+			splitPoints: [],
+			excludedPositions: [...deletedPages],
+		});
+		return segments[0];
+	}
+
+	async function handlePrint() {
+		if (printing || effectivePageCount === 0) return;
+		printing = true;
+		try {
+			// Same basename Export uses, so "Save as PDF" pre-fills with the
+			// document's name instead of the app's <title>.
+			await printPdfBytes(await buildPrintBytes(), {
+				title: sanitizeBasename(sourceFilename),
+			});
+		} catch (err: unknown) {
+			toaster.error({
+				title: "Print failed",
+				description:
+					err instanceof Error ? err.message : "Please try again.",
+			});
+		} finally {
+			printing = false;
 		}
 	}
 
@@ -659,6 +716,20 @@
 				selectAll();
 				return;
 			}
+		}
+
+		// Route the browser's print shortcut to the PDF instead of the DOM,
+		// which would otherwise print app chrome and canvas bitmaps. Only fires
+		// while the app has focus — elsewhere the browser's own print stands.
+		if (
+			(e.metaKey || e.ctrlKey) &&
+			!e.altKey &&
+			!e.shiftKey &&
+			e.code === "KeyP"
+		) {
+			e.preventDefault();
+			void handlePrint();
+			return;
 		}
 
 		if (e.metaKey && !e.altKey && !e.shiftKey && e.code === "KeyF") {
@@ -751,6 +822,12 @@
 			onclose={closeSearch}
 		/>
 	{/if}
+
+	<PrintButton
+		onprint={handlePrint}
+		{printing}
+		disabled={effectivePageCount === 0}
+	/>
 
 	{#if splitMode}
 		<div class="sticky top-4 z-20 flex justify-center pointer-events-none">
