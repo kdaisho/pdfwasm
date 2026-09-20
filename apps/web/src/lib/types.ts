@@ -5,7 +5,11 @@ export interface AuthUser {
 	lastPdfFilename: string | null;
 }
 
-/** Per-character bounding box in PDF coordinate space (origin bottom-left, Y-up, units: points) */
+/**
+ * Per-character bounding box in *render* space: origin at the bottom-left of the
+ * rendered page (CropBox ∩ MediaBox, /Rotate applied), Y-up, units: points.
+ * `extractCharBoxes` converts PDFium's raw page-space boxes into this space.
+ */
 export interface CharBox {
 	char: string;
 	left: number;
