@@ -36,3 +36,36 @@ The typical loop:
 
 1. **Always edit `schema.ts` and run `pnpm db:generate`.** Never hand-write migration SQL — it bypasses the snapshotting step and leaves `drizzle/meta/` out of sync with `drizzle/`.
 2. **If you need `pnpm db:drop`, only drop the latest migration.** Dropping older migrations is unsafe because earlier snapshots may be missing or stale.
+
+### AI split suggestions
+
+Edit Mode's "Suggest splits" asks a model which pages begin a new chapter,
+section, or document. Two providers are wired up (`apps/api/src/lib/suggest/`):
+
+| Provider    | Model              | Key                 | How it asks                                                                      |
+| ----------- | ------------------ | ------------------- | -------------------------------------------------------------------------------- |
+| `jev`       | `jev-latest`       | `TYPESAFE_API_KEY`  | One Noul question per page in a single `systemOne` call, evaluated in parallel.  |
+| `anthropic` | `claude-haiku-4-5` | `ANTHROPIC_API_KEY` | One prompt listing every page, chunked into overlapping windows above 150 pages. |
+
+OpenRouter is used whenever its key is present; Anthropic is the fallback until Jev
+clears the accuracy benchmark below (KDA-63). `SUGGEST_PROVIDER=openrouter|anthropic`
+pins one regardless of which keys are set. With no key, the server still boots
+and `/api/pdf/suggest-splits` answers 503.
+
+#### Benchmarking and tuning `SUGGEST_THRESHOLD`
+
+Jev returns a 0–1 probability per page; `SUGGEST_THRESHOLD` in
+`apps/api/src/constants.ts` decides which become splits. Tune it from real
+documents rather than by eye:
+
+```
+pnpm --filter @api run benchmark:suggest <fixtures-dir>
+```
+
+Each fixture is one JSON file — `{ name, pages, expectedSplitAfter }` — where
+`pages` is the payload the editor already POSTs to `/pdfs/suggest-splits`
+(copy the request body from devtools) and `expectedSplitAfter` is the
+boundaries you would have drawn by hand. The harness scores both providers per
+fixture and sweeps every candidate threshold over Jev's probabilities, ranking
+by F2 (a missed boundary costs more than a spurious one, which the user can
+delete in one click).
