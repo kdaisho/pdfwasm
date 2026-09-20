@@ -94,6 +94,14 @@ export default defineConfig(
 	},
 
 	{
+		// CLI scripts report to stdout; that is their output, not stray logging.
+		files: ["**/scripts/**/*.ts"],
+		rules: {
+			"no-console": "off",
+		},
+	},
+
+	{
 		files: ["**/*.svelte"],
 		rules: {
 			"prefer-const": "off",

@@ -12,7 +12,10 @@ import {
 	PDF_STORAGE_PATH,
 	MAX_SUGGEST_PAGES,
 } from "../constants.js";
-import { suggestSplitPoints } from "../lib/suggestSplits.js";
+import {
+	isSuggestConfigured,
+	suggestSplitPoints,
+} from "../lib/suggestSplits.js";
 import type { AuthEnv } from "../types.js";
 
 const pdf = new Hono<AuthEnv>();
@@ -183,7 +186,7 @@ pdf.delete("/:id", async (c) => {
 });
 
 pdf.post("/suggest-splits", async (c) => {
-	if (!process.env.ANTHROPIC_API_KEY) {
+	if (!isSuggestConfigured()) {
 		return c.json(
 			{ error: "AI suggestions are not configured on the server" },
 			503,

@@ -1,78 +1,56 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
+import * as anthropic from "./suggest/anthropic.js";
+import * as openrouter from "./suggest/openrouter.js";
 import {
-	SUGGEST_MODEL,
-	SUGGEST_CHUNK_THRESHOLD,
-	SUGGEST_CHUNK_WINDOW,
-	SUGGEST_CHUNK_OVERLAP,
-	SUGGEST_SNIPPET_MAX,
-} from "../constants.js";
+	isBlank,
+	type SuggestPage,
+	type SuggestProvider,
+} from "./suggest/types.js";
 
-export interface SuggestPage {
-	/** Sequence position of the page (as the client renders it). */
-	position: number;
-	/** Leading text of the page. */
-	text: string;
+export type { SuggestPage, SuggestProvider };
+
+/** Environment variable holding each provider's credential. */
+const API_KEY_ENV: Record<SuggestProvider, string> = {
+	openrouter: "OPENROUTER_API_KEY",
+	anthropic: "ANTHROPIC_API_KEY",
+};
+
+function hasKey(provider: SuggestProvider): boolean {
+	return Boolean(process.env[API_KEY_ENV[provider]]?.trim());
 }
 
-// Constructed lazily so the API server still boots when ANTHROPIC_API_KEY is
-// unset — only the suggest-splits endpoint depends on it.
-let _client: Anthropic | null = null;
-function getClient(): Anthropic {
-	if (!_client) _client = new Anthropic();
-	return _client;
+/**
+ * The provider that will answer a suggestion request, or null when none is
+ * configured (the endpoint then reports 503 rather than failing per request).
+ *
+ * Values name the API we hold a key for, not the model: "openrouter" serves
+ * TypeSafe's Jev through its Decisions API, so it needs an OpenRouter key and
+ * never a TypeSafe one.
+ *
+ * OpenRouter wins when its key is present; Anthropic remains the fallback
+ * until KDA-63's accuracy benchmark clears Jev. SUGGEST_PROVIDER pins one explicitly
+ * — a pinned provider whose key is missing counts as unconfigured rather than
+ * silently falling back to the other one.
+ */
+export function activeProvider(): SuggestProvider | null {
+	const pinned = process.env.SUGGEST_PROVIDER?.trim();
+	if (pinned === "openrouter" || pinned === "anthropic") {
+		return hasKey(pinned) ? pinned : null;
+	}
+	if (pinned) {
+		// Silently auto-selecting past a typo here sends requests to a provider
+		// the operator did not choose, which is near-impossible to spot.
+		console.warn(
+			`SUGGEST_PROVIDER="${pinned}" is not a provider (expected "openrouter" or "anthropic"); falling back to auto-selection.`,
+		);
+	}
+	if (hasKey("openrouter")) return "openrouter";
+	if (hasKey("anthropic")) return "anthropic";
+	return null;
 }
 
-const SYSTEM_PROMPT = `You suggest where to split one PDF into multiple separate files.
-
-You are given the pages in order. Each line is "Page <N>: <leading text of that page>". Identify the pages that BEGIN a new unit — the first page of a new chapter or major section of the same work, or the first page of a new, unrelated document (a new invoice, letter, statement, form, contract, report, etc.).
-
-Return the page number of each such first page — the page that CARRIES the heading itself: the page showing "Chapter 3", "Part II", a titled section start, a new letterhead, or a reset "Page 1 of N". A chapter or part title/divider page is the FIRST page of its unit, not the last page of the previous one — return that title/divider page's number. Rules:
-- Use the exact page numbers shown in the listing.
-- Identify a new unit from cues such as a chapter or part heading, a new header or letterhead, a "Page 1 of N" counter resetting, a new addressee or sender, a new invoice/reference/account number, or an abrupt change of subject.
-- Prefer top-level boundaries (chapters, major sections, separate documents) over minor ones (sub-sections, individual figures, or single paragraphs).
-- Some pages are shown as "[blank page]" (they contain no text). A blank page belongs to the unit that PRECEDES it — never report a blank page as the start of a unit. A unit's first page is the page that carries its heading; when a chapter opener follows one or more blank pages, return the opener's page number, not the blank one.
-- When you are genuinely unsure whether a page begins a new unit, PREFER to include it. A spurious split is trivial for the user to remove, whereas a missed one is easy to overlook.
-- Do NOT include the very first page of the listing (it already starts the first file). Return an empty list only when the pages truly form a single continuous unit.`;
-
-const outputFormat = jsonSchemaOutputFormat({
-	type: "object",
-	properties: {
-		startPages: {
-			type: "array",
-			items: { type: "integer" },
-			description:
-				"Page numbers that each BEGIN a new chapter, section, or document (the page carrying the heading/title/letterhead).",
-		},
-	},
-	required: ["startPages"],
-	additionalProperties: false,
-} as const);
-
-/** Ask the model which pages begin a new unit, for one listing of pages. */
-async function requestStartPages(pages: SuggestPage[]): Promise<number[]> {
-	const listing = pages
-		.map((p) =>
-			p.text.trim() === ""
-				? `Page ${p.position}: [blank page]`
-				: `Page ${p.position}: ${p.text.slice(0, SUGGEST_SNIPPET_MAX)}`,
-		)
-		.join("\n");
-
-	const message = await getClient().messages.parse({
-		model: SUGGEST_MODEL,
-		max_tokens: 2048,
-		system: SYSTEM_PROMPT,
-		messages: [
-			{
-				role: "user",
-				content: `Here are the ${pages.length} pages in order. Identify the pages that begin a new unit.\n\n${listing}`,
-			},
-		],
-		output_config: { format: outputFormat },
-	});
-
-	return message.parsed_output?.startPages ?? [];
+/** Whether the server can answer suggestion requests at all. */
+export function isSuggestConfigured(): boolean {
+	return activeProvider() !== null;
 }
 
 /**
@@ -83,17 +61,15 @@ async function requestStartPages(pages: SuggestPage[]): Promise<number[]> {
  * preceding file. Returns a sorted, de-duplicated list of valid non-final
  * positions.
  */
-function toSplitPoints(
+export function toSplitPoints(
 	pages: SuggestPage[],
 	startPages: Iterable<number>,
 ): number[] {
 	const valid = new Set(pages.map((p) => p.position));
 	const firstPosition = Math.min(...pages.map((p) => p.position));
 	const lastPosition = Math.max(...pages.map((p) => p.position));
-	const blankByPosition = new Map(
-		pages.map((p) => [p.position, p.text.trim() === ""]),
-	);
-	const isBlank = (pos: number) => blankByPosition.get(pos) ?? true;
+	const blankByPosition = new Map(pages.map((p) => [p.position, isBlank(p)]));
+	const isBlankAt = (pos: number) => blankByPosition.get(pos) ?? true;
 
 	const kept = new Set<number>();
 	for (const s of startPages) {
@@ -102,7 +78,7 @@ function toSplitPoints(
 		// A unit never starts on a blank page (books put a blank verso before a
 		// chapter opener). Advance to the real opener.
 		let opener = s;
-		while (opener <= lastPosition && isBlank(opener)) opener++;
+		while (opener <= lastPosition && isBlankAt(opener)) opener++;
 		if (opener > lastPosition || !valid.has(opener)) continue;
 
 		const splitAt = opener - 1;
@@ -113,36 +89,22 @@ function toSplitPoints(
 	return [...kept].sort((a, b) => a - b);
 }
 
-/** Slice pages into overlapping windows for chunked processing. */
-function buildWindows(pages: SuggestPage[]): SuggestPage[][] {
-	const stride = SUGGEST_CHUNK_WINDOW - SUGGEST_CHUNK_OVERLAP;
-	const windows: SuggestPage[][] = [];
-	for (let start = 0; start < pages.length; start += stride) {
-		windows.push(pages.slice(start, start + SUGGEST_CHUNK_WINDOW));
-		if (start + SUGGEST_CHUNK_WINDOW >= pages.length) break;
-	}
-	return windows;
-}
-
 /**
- * Propose split points for a PDF. Large docs (>= SUGGEST_CHUNK_THRESHOLD) are
- * split into overlapping windows processed in parallel, so the model never has
- * to track page numbers across a long listing (which makes accuracy drift the
- * deeper it gets); smaller docs go in a single call. Boundaries found in any
- * window are merged.
+ * Propose split points for a PDF: positions to split AFTER, so each position's
+ * page is the last of a segment. Response shape is provider-independent.
  */
 export async function suggestSplitPoints(
 	pages: SuggestPage[],
 ): Promise<number[]> {
-	const windows =
-		pages.length >= SUGGEST_CHUNK_THRESHOLD ? buildWindows(pages) : [pages];
+	const provider = activeProvider();
+	if (!provider) {
+		throw new Error("No AI suggestion provider is configured");
+	}
 
-	const perWindow = await Promise.all(
-		windows.map((w) => requestStartPages(w)),
-	);
+	const starts =
+		provider === "openrouter"
+			? await openrouter.startPages(pages)
+			: await anthropic.startPages(pages);
 
-	const merged = new Set<number>();
-	for (const list of perWindow) for (const s of list) merged.add(s);
-
-	return toSplitPoints(pages, merged);
+	return toSplitPoints(pages, starts);
 }
