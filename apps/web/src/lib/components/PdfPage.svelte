@@ -17,6 +17,16 @@
 	let rendering = $state(false);
 	let localImageData: ImageData | null = $state(null);
 	let lastRendered: PageData | null = $state(null);
+	// Bumped when the bitmap is released so an in-flight render drops its result.
+	let bitmapGeneration = 0;
+
+	// A page must stay near the viewport this long before rendering starts, so
+	// pages merely swept past during a long scroll don't queue PDFium renders
+	// (single-threaded, and not cancellable once started) ahead of the target.
+	const RENDER_DELAY_MS = 100;
+	// Bitmaps are ~width×height×4 bytes each; drop them once the page is this
+	// far outside the scroll viewport so long documents don't hoard memory.
+	const RELEASE_MARGIN = "3000px";
 
 	function pdfToCanvas(
 		left: number,
@@ -37,6 +47,7 @@
 	async function renderPage() {
 		if (rendering || lastRendered === page) return;
 		const target = page;
+		const generation = bitmapGeneration;
 		rendering = true;
 		try {
 			const pdfPage = doc.getPage(target.index);
@@ -49,6 +60,7 @@
 				render: "bitmap",
 			});
 			if (page !== target) return; // superseded by a prop change mid-render
+			if (generation !== bitmapGeneration) return; // released mid-render
 			localImageData = new ImageData(
 				new Uint8ClampedArray(rendered.data.buffer as ArrayBuffer),
 				rendered.width,
@@ -69,19 +81,43 @@
 		}
 	});
 
+	function releaseBitmap() {
+		if (!localImageData && !rendering) return;
+		bitmapGeneration++;
+		localImageData = null;
+		lastRendered = null;
+	}
+
 	function observe(node: HTMLDivElement) {
-		const observer = new IntersectionObserver(
+		// The app scrolls inside <main>, not the window; rootMargin only
+		// extends the root, so observe against the real scroll container.
+		const root = node.closest("main");
+		let renderTimer: ReturnType<typeof setTimeout> | undefined;
+		const nearObserver = new IntersectionObserver(
 			(entries) => {
+				clearTimeout(renderTimer);
 				if (entries[0]?.isIntersecting) {
-					void renderPage();
+					renderTimer = setTimeout(
+						() => void renderPage(),
+						RENDER_DELAY_MS,
+					);
 				}
 			},
-			{ rootMargin: "200px" },
+			{ root, rootMargin: "200px" },
 		);
-		observer.observe(node);
+		const farObserver = new IntersectionObserver(
+			(entries) => {
+				if (entries[0] && !entries[0].isIntersecting) releaseBitmap();
+			},
+			{ root, rootMargin: RELEASE_MARGIN },
+		);
+		nearObserver.observe(node);
+		farObserver.observe(node);
 		return {
 			destroy() {
-				observer.disconnect();
+				clearTimeout(renderTimer);
+				nearObserver.disconnect();
+				farObserver.disconnect();
 			},
 		};
 	}

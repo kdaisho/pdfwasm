@@ -112,16 +112,30 @@
 			pages = pageDataList;
 			docLoading = false;
 
-			for (let i = 0; i < pageCount; i++) {
+			// Not awaited: callers (e.g. init) must not hold the viewer behind a
+			// loading screen until every page's text has been extracted.
+			void extractAllChars(doc, extractionId);
+		} catch (err: unknown) {
+			docError = err instanceof Error ? err : new Error(String(err));
+			docLoading = false;
+		}
+	}
+
+	async function extractAllChars(doc: PDFiumDocument, extractionId: number) {
+		try {
+			for (let i = 0; i < pages.length; i++) {
 				if (extractionId !== charExtractionId) return;
+				// Visible pages extract their own chars on render; re-extracting
+				// would swap in a new array and invalidate that page's search cache.
+				if (pages[i].chars.length > 0) continue;
 				const page = doc.getPage(i);
 				const chars = extractCharBoxes(page);
 				pages[i].chars = chars;
 				await new Promise((r) => setTimeout(r, 0));
 			}
 		} catch (err: unknown) {
+			if (extractionId !== charExtractionId) return;
 			docError = err instanceof Error ? err : new Error(String(err));
-			docLoading = false;
 		}
 	}
 
