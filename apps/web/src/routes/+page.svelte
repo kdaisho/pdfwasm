@@ -114,6 +114,9 @@
 
 			for (let i = 0; i < pageCount; i++) {
 				if (extractionId !== charExtractionId) return;
+				// Visible pages extract their own chars on render; re-extracting
+				// would swap in a new array and invalidate that page's search cache.
+				if (pages[i].chars.length > 0) continue;
 				const page = doc.getPage(i);
 				const chars = extractCharBoxes(page);
 				pages[i].chars = chars;

@@ -3,7 +3,7 @@
 	import type { PDFiumDocument } from "@hyzyla/pdfium";
 	import { ZOOM_BASE_WIDTH, stepZoomWidth } from "$lib/constants/zoom";
 	import type { PageData, SearchMatch } from "$lib/types";
-	import { findMatches } from "$lib/services/search";
+	import { findMatchesPerPage, type SearchCache } from "$lib/services/search";
 	import { RENDER_SCALE, extractCharBoxes } from "$lib/services/charBoxes";
 	import { getPdfiumLibrary } from "$lib/services/pdfium";
 	import {
@@ -60,7 +60,13 @@
 	let debouncedQuery = $state("");
 	let caseSensitive = $state(false);
 	let wholeWord = $state(false);
-	let currentMatchIndex = $state(-1);
+	// Track the active match by identity, not list position: char boxes load in
+	// the background (visible pages first), so matches can be inserted before
+	// the active one and shift its index.
+	let activeMatch: SearchMatch | null = $state(null);
+	// Bumped only when the user picks a match (new query, next/prev). The
+	// scroll effect keys off this so background match updates never re-scroll.
+	let scrollRequest = $state(0);
 	let splitPoints = new SvelteSet<number>();
 	let deletedPages = new SvelteSet<number>();
 	let exporting = $state(false);
@@ -191,8 +197,28 @@
 		return () => clearTimeout(timer);
 	});
 
-	let matches: SearchMatch[] = $derived(
-		findMatches(pages, debouncedQuery, { caseSensitive, wholeWord }),
+	const searchCache: SearchCache = new WeakMap();
+	const NO_MATCHES: SearchMatch[] = [];
+
+	let matchesPerPage: SearchMatch[][] = $derived(
+		findMatchesPerPage(
+			pages,
+			debouncedQuery,
+			{ caseSensitive, wholeWord },
+			searchCache,
+		),
+	);
+
+	let matches: SearchMatch[] = $derived(matchesPerPage.flat());
+
+	let currentMatchIndex = $derived(
+		activeMatch
+			? matches.findIndex(
+					(m) =>
+						m.pageIndex === activeMatch!.pageIndex &&
+						m.charIndex === activeMatch!.charIndex,
+				)
+			: -1,
 	);
 
 	let combinedSequence: PageRef[] = $derived(
@@ -259,24 +285,61 @@
 		).length,
 	);
 
-	// Reset to first match only when search parameters change (not when background extraction adds chars)
+	// Reset the active match when search parameters change.
 	$effect(() => {
 		debouncedQuery;
 		caseSensitive;
 		wholeWord;
-		currentMatchIndex = untrack(() => matches.length) > 0 ? 0 : -1;
+		activeMatch = null;
 	});
 
-	// Scroll active match into view
+	// Select (and scroll to) the first match once one exists — possibly only
+	// after background char extraction reaches a matching page.
 	$effect(() => {
-		if (currentMatchIndex < 0 || matches.length === 0) return;
-		const match = matches[currentMatchIndex];
+		if (activeMatch === null && matches.length > 0) {
+			activeMatch = matches[0];
+			scrollRequest++;
+		}
+	});
+
+	function stepMatch(delta: 1 | -1) {
+		const n = matches.length;
+		if (n === 0) return;
+		const next =
+			currentMatchIndex < 0
+				? delta > 0
+					? 0
+					: n - 1
+				: (currentMatchIndex + delta + n) % n;
+		activeMatch = matches[next];
+		scrollRequest++;
+	}
+
+	// Jumping far with smooth scrolling sweeps past every page in between,
+	// making each one start a render; jump instantly instead.
+	function scrollBehaviorFor(distance: number, viewport: number) {
+		return Math.abs(distance) > viewport * 2 ? "auto" : "smooth";
+	}
+
+	function scrollPageIntoView(pageEl: HTMLDivElement) {
+		pageEl.scrollIntoView({
+			behavior: scrollBehaviorFor(
+				pageEl.getBoundingClientRect().top,
+				window.innerHeight,
+			),
+			block: "nearest",
+		});
+	}
+
+	function scrollToActiveMatch() {
+		const match = activeMatch;
+		if (!match) return;
 		const pageEl = pageElements.get(match.pageIndex);
 		if (!pageEl) return;
 
 		// In split mode, thumbnails are small — just scroll the page cell into view
 		if (splitMode) {
-			pageEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			scrollPageIntoView(pageEl);
 			return;
 		}
 
@@ -284,7 +347,7 @@
 		if (!page) return;
 		const char = page.chars[match.charIndex];
 		if (!char) {
-			pageEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			scrollPageIntoView(pageEl);
 			return;
 		}
 		const charYInPage =
@@ -295,7 +358,7 @@
 		// match within the actual scroll container.
 		const scroller = pageEl.closest("main");
 		if (!scroller) {
-			pageEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			scrollPageIntoView(pageEl);
 			return;
 		}
 		const pageRect = pageEl.getBoundingClientRect();
@@ -305,7 +368,18 @@
 			(pageRect.top - scrollerRect.top) +
 			charYInPage -
 			scroller.clientHeight / 2;
-		scroller.scrollTo({ top: targetY, behavior: "smooth" });
+		scroller.scrollTo({
+			top: targetY,
+			behavior: scrollBehaviorFor(
+				targetY - scroller.scrollTop,
+				scroller.clientHeight,
+			),
+		});
+	}
+
+	$effect(() => {
+		if (scrollRequest === 0) return;
+		untrack(scrollToActiveMatch);
 	});
 
 	// Clear split points, exclusions, and inserted-source state when exiting split mode.
@@ -674,15 +748,11 @@
 	}
 
 	function goToNext() {
-		const n = matches.length;
-		if (n === 0) return;
-		currentMatchIndex = (currentMatchIndex + 1) % n;
+		stepMatch(1);
 	}
 
 	function goToPrev() {
-		const n = matches.length;
-		if (n === 0) return;
-		currentMatchIndex = (currentMatchIndex - 1 + n) % n;
+		stepMatch(-1);
 	}
 
 	function closeSearch() {
@@ -745,13 +815,7 @@
 
 		if (e.metaKey && !e.altKey && e.code === "KeyG") {
 			e.preventDefault();
-			const n = matches.length;
-			if (n === 0) return;
-			if (e.shiftKey) {
-				currentMatchIndex = (currentMatchIndex - 1 + n) % n;
-			} else {
-				currentMatchIndex = (currentMatchIndex + 1) % n;
-			}
+			stepMatch(e.shiftKey ? -1 : 1);
 			return;
 		}
 
@@ -969,13 +1033,11 @@
 			{@const page = resolvePageData(ref)}
 			{@const pageMatches =
 				ref.kind === "original"
-					? matches.filter((m) => m.pageIndex === ref.index)
-					: []}
+					? (matchesPerPage[ref.index] ?? NO_MATCHES)
+					: NO_MATCHES}
 			{@const activeCharIndex =
-				ref.kind === "original" &&
-				currentMatchIndex >= 0 &&
-				matches[currentMatchIndex]?.pageIndex === ref.index
-					? matches[currentMatchIndex].charIndex
+				ref.kind === "original" && activeMatch?.pageIndex === ref.index
+					? activeMatch.charIndex
 					: -1}
 			{@const gIdx = pageGroupMap.get(position) ?? 0}
 			<!-- Keep each page and its trailing gutter in one flex unit so the
