@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@hyzyla/pdfium": "^2.1.9",
 		"@pdfwasm/shared": "workspace:*",
+		"@simplewebauthn/browser": "^13.3.0",
 		"jszip": "^3.10.1",
 		"pdf-lib": "^1.17.1"
 	},

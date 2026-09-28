@@ -5,6 +5,7 @@
 	import type { AuthUser } from "$lib/types.js";
 	import { resolve } from "$app/paths";
 	import { Steps } from "@skeletonlabs/skeleton-svelte";
+	import PasskeySignIn from "./PasskeySignIn.svelte";
 
 	interface Props {
 		open: boolean;
@@ -172,7 +173,7 @@
 									class="input"
 									bind:value={loginEmail}
 									required
-									autocomplete="email"
+									autocomplete="username webauthn"
 									placeholder="you@example.com"
 								/>
 							</label>
@@ -199,6 +200,15 @@
 								{auth.loading ? "Logging in…" : "Log In"}
 							</button>
 						</form>
+
+						<div class="mt-4">
+							<!-- Dialog content stays mounted while closed, so only
+							     run the autofill request while the modal is open -->
+							<PasskeySignIn
+								autofill={open}
+								onSuccess={onAuthSuccess}
+							/>
+						</div>
 
 						<p class="text-sm text-center mt-4">
 							<a
