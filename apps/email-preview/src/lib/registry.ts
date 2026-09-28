@@ -21,9 +21,9 @@ export const templates: Record<string, TemplateEntry> = {
 				actionLabel: "complete your registration",
 				otp: "847291",
 			},
-			"password-reset": {
-				subject: "Reset your passphrase — PDF Viewer",
-				actionLabel: "reset your passphrase",
+			"sign-in": {
+				subject: "Your sign-in code — PDF Viewer",
+				actionLabel: "sign in",
 				otp: "503816",
 			},
 		},
