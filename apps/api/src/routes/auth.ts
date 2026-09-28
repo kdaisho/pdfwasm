@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq, and, desc } from "drizzle-orm";
-import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import { getCookie, deleteCookie } from "hono/cookie";
 import { db } from "../db/index.js";
 import {
 	users,
@@ -16,12 +16,12 @@ import {
 	createSession,
 	deleteSession,
 	deleteUserSessions,
+	setSessionCookie,
 } from "../lib/session.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { AuthEnv } from "../types.js";
 import {
 	SESSION_COOKIE_NAME,
-	SESSION_MAX_AGE,
 	OTP_TTL_MS,
 	MAX_OTP_ATTEMPTS,
 	OTP_RESEND_COOLDOWN_MS,
@@ -38,16 +38,6 @@ function checkResendCooldown(createdAt: Date): {
 }
 
 const auth = new Hono<AuthEnv>();
-
-function setSessionCookie(c: Parameters<typeof setCookie>[0], token: string) {
-	setCookie(c, SESSION_COOKIE_NAME, token, {
-		httpOnly: true,
-		sameSite: "Lax",
-		path: "/",
-		maxAge: SESSION_MAX_AGE,
-		secure: process.env.NODE_ENV === "production",
-	});
-}
 
 // ── /me ─────────────────────────────────────────────────────────────────────
 

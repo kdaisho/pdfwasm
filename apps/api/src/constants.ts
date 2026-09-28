@@ -10,6 +10,18 @@ export {
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days in seconds
 export const SESSION_DURATION_MS = SESSION_MAX_AGE * 1000;
 
+// ── Passkeys / WebAuthn (server-only) ─────────────────────────────────────────
+// Challenges are single-use and live server-side; this HttpOnly cookie holds
+// the pending challenge's row ID, since passkey sign-in doesn't know the user
+// until the assertion comes back. KDA-66.
+export const WEBAUTHN_CHALLENGE_COOKIE_NAME = "webauthn_challenge";
+export const WEBAUTHN_CHALLENGE_COOKIE_PATH = "/api/auth/passkey";
+export const WEBAUTHN_CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+// Per-client limit on the options endpoints (each call writes a challenge row).
+// Generous because the login page requests options on every load for autofill.
+export const PASSKEY_OPTIONS_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+export const PASSKEY_OPTIONS_RATE_LIMIT_MAX = 20;
+
 // ── PDF uploads (server-only) ────────────────────────────────────────────────
 export const PDF_STORAGE_PATH =
 	process.env.PDF_STORAGE_PATH || "./storage/pdfs";
