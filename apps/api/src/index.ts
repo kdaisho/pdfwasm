@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import authRoutes from "./routes/auth.js";
+import passkeyRoutes from "./routes/passkey.js";
 import pdfRoutes from "./routes/pdf.js";
 import { DEFAULT_PORT } from "./constants.js";
 
@@ -20,6 +21,7 @@ app.use(
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 app.route("/api/auth", authRoutes);
+app.route("/api/auth/passkey", passkeyRoutes);
 app.route("/api/pdfs", pdfRoutes);
 
 const port = Number(process.env.PORT) || DEFAULT_PORT;

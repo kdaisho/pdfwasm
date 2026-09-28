@@ -1,7 +1,25 @@
 import { eq } from "drizzle-orm";
+import { setCookie } from "hono/cookie";
 import { db } from "../db/index.js";
 import { sessions } from "../db/schema.js";
-import { SESSION_DURATION_MS } from "../constants.js";
+import {
+	SESSION_COOKIE_NAME,
+	SESSION_MAX_AGE,
+	SESSION_DURATION_MS,
+} from "../constants.js";
+
+export function setSessionCookie(
+	c: Parameters<typeof setCookie>[0],
+	token: string,
+) {
+	setCookie(c, SESSION_COOKIE_NAME, token, {
+		httpOnly: true,
+		sameSite: "Lax",
+		path: "/",
+		maxAge: SESSION_MAX_AGE,
+		secure: process.env.NODE_ENV === "production",
+	});
+}
 
 export async function createSession(userId: string): Promise<string> {
 	const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
