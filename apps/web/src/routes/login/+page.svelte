@@ -12,7 +12,7 @@
 		e.preventDefault();
 		try {
 			await auth.login(email, passphrase);
-			goto(resolve("/"));
+			goto(resolve("/"), { invalidateAll: true });
 		} catch {
 			// error is displayed via auth.error
 		}

@@ -74,7 +74,7 @@
 						class="w-full py-[7px] rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium hover:bg-surface-100 transition-colors"
 						onclick={async () => {
 							await auth.logout();
-							goto(resolve("/"));
+							goto(resolve("/"), { invalidateAll: true });
 						}}
 					>
 						Log Out
