@@ -2,17 +2,22 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import PasskeySignIn from "$lib/components/PasskeySignIn.svelte";
 
 	const auth = getAuth();
 
 	let email = $state("");
 	let passphrase = $state("");
 
+	function goHome() {
+		goto(resolve("/"), { invalidateAll: true });
+	}
+
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		try {
 			await auth.login(email, passphrase);
-			goto(resolve("/"), { invalidateAll: true });
+			goHome();
 		} catch {
 			// error is displayed via auth.error
 		}
@@ -39,7 +44,7 @@
 					class="input"
 					bind:value={email}
 					required
-					autocomplete="email"
+					autocomplete="username webauthn"
 					placeholder="you@example.com"
 				/>
 			</label>
@@ -64,6 +69,8 @@
 				{auth.loading ? "Logging in…" : "Log In"}
 			</button>
 		</form>
+
+		<PasskeySignIn autofill onSuccess={goHome} />
 
 		<div class="space-y-2 text-sm text-center">
 			<p>
