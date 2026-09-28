@@ -69,7 +69,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       '@simplewebauthn/server':
-        specifier: ^13
+        specifier: ^13.3.3
         version: 13.3.3
       bcrypt:
         specifier: ^5.1.1
