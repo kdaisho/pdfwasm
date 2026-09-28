@@ -6,7 +6,6 @@
 	import StepIndicator from "$lib/components/StepIndicator.svelte";
 	import { apiFetch } from "$lib/services/api.js";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
-	import type { AuthUser } from "$lib/types.js";
 
 	const auth = getAuth();
 
@@ -23,14 +22,6 @@
 	let otpError = $state<string | null>(null);
 	let otpLoading = $state(false);
 
-	// Step 3 – passphrase handover
-	let passphrase = $state("");
-	let verifiedToken = $state("");
-	let copied = $state(false);
-	let savedChecked = $state(false);
-	let completeLoading = $state(false);
-	let completeError = $state<string | null>(null);
-
 	const STORAGE_KEY = "signup_state";
 
 	function persistState() {
@@ -40,8 +31,6 @@
 				JSON.stringify({
 					step,
 					email,
-					verifiedToken,
-					passphrase,
 					savedAt: Date.now(),
 				}),
 			);
@@ -56,27 +45,18 @@
 			if (!raw) return;
 			const saved = JSON.parse(raw);
 			// Drop persisted state after 10 min, matching the OTP server-side TTL —
-			// keeps a stale verify screen (and any passphrase in storage) from
-			// lingering longer than the code is useful.
+			// keeps a stale verify screen from lingering longer than the code is
+			// useful.
 			if (Date.now() - saved.savedAt > 10 * 60 * 1000) {
 				sessionStorage.removeItem(STORAGE_KEY);
 				return;
 			}
-			if (saved.step < 1 || saved.step > 2) {
-				sessionStorage.removeItem(STORAGE_KEY);
-				return;
-			}
-			if (
-				saved.step === 2 &&
-				(!saved.verifiedToken || !saved.passphrase)
-			) {
+			if (saved.step !== 1) {
 				sessionStorage.removeItem(STORAGE_KEY);
 				return;
 			}
 			step = saved.step;
 			email = saved.email;
-			verifiedToken = saved.verifiedToken;
-			passphrase = saved.passphrase;
 		} catch {
 			sessionStorage.removeItem(STORAGE_KEY);
 		}
@@ -111,17 +91,13 @@
 		otpError = null;
 		otpLoading = true;
 		try {
-			const res = await apiFetch<{
-				verifiedToken: string;
-				passphrase: string;
-			}>("/auth/signup/verify-otp", {
+			await apiFetch("/auth/signup/verify-otp", {
 				method: "POST",
 				body: JSON.stringify({ email, otp }),
 			});
-			verifiedToken = res.verifiedToken;
-			passphrase = res.passphrase;
-			step = 2;
-			persistState();
+			await auth.initAuth();
+			sessionStorage.removeItem(STORAGE_KEY);
+			goto(resolve("/"), { invalidateAll: true });
 		} catch (err) {
 			otpError =
 				err instanceof Error ? err.message : "Verification failed";
@@ -130,34 +106,7 @@
 		}
 	}
 
-	async function copyPassphrase() {
-		await navigator.clipboard.writeText(passphrase);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	async function complete() {
-		completeError = null;
-		completeLoading = true;
-		try {
-			await apiFetch<{ user: AuthUser }>("/auth/signup/complete", {
-				method: "POST",
-				body: JSON.stringify({ verifiedToken }),
-			});
-			await auth.initAuth();
-			sessionStorage.removeItem(STORAGE_KEY);
-			goto(resolve("/"), { invalidateAll: true });
-		} catch (err) {
-			completeError =
-				err instanceof Error
-					? err.message
-					: "Failed to complete signup";
-		} finally {
-			completeLoading = false;
-		}
-	}
-
-	const stepTitles = ["Your email", "Verify email", "Your passphrase"];
+	const stepTitles = ["Your email", "Verify email"];
 </script>
 
 <div class="flex items-center justify-center min-h-screen px-4 py-12">
@@ -170,7 +119,7 @@
 			</p>
 		</div>
 
-		<Steps {step} count={3} linear class="w-full">
+		<Steps {step} count={2} linear class="w-full">
 			<StepIndicator {step} titles={stepTitles} />
 
 			<!-- Step 0: Email -->
@@ -254,7 +203,9 @@
 							class="btn preset-filled-primary-500 w-full"
 							disabled={otpLoading || otp.length !== 6}
 						>
-							{otpLoading ? "Verifying…" : "Verify code"}
+							{otpLoading
+								? "Creating account…"
+								: "Create account"}
 						</button>
 					</form>
 
@@ -276,75 +227,8 @@
 					<p class="text-xs text-surface-500 mt-3 text-center">
 						Already have an account? You won't get a code —
 						<a href={resolve("/login")} class="underline">log in</a>
-						or
-						<a href={resolve("/reset-password")} class="underline"
-							>reset your passphrase</a
-						>.
+						instead.
 					</p>
-				</div>
-			</Steps.Content>
-
-			<!-- Step 2: Passphrase handover -->
-			<Steps.Content index={2}>
-				<div
-					class="card preset-outlined-surface-200 p-6 rounded-xl space-y-6"
-				>
-					<div>
-						<h2 class="text-xl font-semibold mb-1">
-							Save your passphrase
-						</h2>
-						<p class="text-sm text-surface-500">
-							This is the only time you'll see it. Store it
-							somewhere safe — you'll need it to log in.
-						</p>
-					</div>
-
-					<!-- Passphrase display -->
-					<div class="relative">
-						<div
-							class="font-mono text-base sm:text-lg font-semibold tracking-wide bg-surface-100-800 border border-surface-300 rounded-xl px-5 py-4 break-all select-all"
-						>
-							{passphrase}
-						</div>
-						<button
-							class="btn preset-tonal-primary mt-3 w-full"
-							onclick={copyPassphrase}
-						>
-							{copied ? "✓ Copied!" : "Copy to clipboard"}
-						</button>
-					</div>
-
-					{#if completeError}
-						<div
-							class="text-error-500 text-sm p-3 bg-error-50 rounded-lg"
-						>
-							{completeError}
-						</div>
-					{/if}
-
-					<!-- Confirmation checkbox -->
-					<label class="flex items-start gap-3 cursor-pointer group">
-						<input
-							type="checkbox"
-							class="checkbox mt-0.5 shrink-0"
-							bind:checked={savedChecked}
-						/>
-						<span class="text-sm leading-snug">
-							I have saved this passphrase in a safe place and
-							understand I cannot recover it without resetting my
-							account.
-						</span>
-					</label>
-
-					<button
-						class="btn preset-filled-primary-500 w-full"
-						disabled={!savedChecked || completeLoading}
-						onclick={complete}
-					>
-						{completeLoading
-							? "Finishing…"
-							: "Finish — take me to the app"}
-					</button>
 				</div>
 			</Steps.Content>
 		</Steps>

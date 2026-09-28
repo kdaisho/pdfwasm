@@ -14,17 +14,15 @@ const FROM_NAME = "PDF Viewer";
 export async function sendOtpEmail(
 	to: string,
 	otp: string,
-	type: "signup" | "password_reset",
+	type: "signup" | "sign_in",
 ): Promise<void> {
 	const subject =
 		type === "signup"
 			? "Confirm your email — PDF Viewer"
-			: "Reset your passphrase — PDF Viewer";
+			: "Your sign-in code — PDF Viewer";
 
 	const actionLabel =
-		type === "signup"
-			? "complete your registration"
-			: "reset your passphrase";
+		type === "signup" ? "complete your registration" : "sign in";
 
 	const props = { subject, actionLabel, otp };
 	const html = render({ template: Otp, props });

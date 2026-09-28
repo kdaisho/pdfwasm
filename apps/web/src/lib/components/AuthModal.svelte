@@ -2,9 +2,8 @@
 	import { Dialog, Tabs, Portal } from "@skeletonlabs/skeleton-svelte";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { apiFetch } from "$lib/services/api.js";
-	import type { AuthUser } from "$lib/types.js";
-	import { resolve } from "$app/paths";
 	import { Steps } from "@skeletonlabs/skeleton-svelte";
+	import EmailCodeSignIn from "./EmailCodeSignIn.svelte";
 	import PasskeySignIn from "./PasskeySignIn.svelte";
 
 	interface Props {
@@ -17,20 +16,6 @@
 
 	const auth = getAuth();
 
-	// --- Login state ---
-	let loginEmail = $state("");
-	let loginPassphrase = $state("");
-
-	async function handleLogin(e: SubmitEvent) {
-		e.preventDefault();
-		try {
-			await auth.login(loginEmail, loginPassphrase);
-			onAuthSuccess();
-		} catch {
-			// error displayed via auth.error
-		}
-	}
-
 	// --- Signup state ---
 	let signupStep = $state(0);
 	let signupEmail = $state("");
@@ -40,13 +25,6 @@
 	let otp = $state("");
 	let otpError = $state<string | null>(null);
 	let otpLoading = $state(false);
-
-	let passphrase = $state("");
-	let verifiedToken = $state("");
-	let copied = $state(false);
-	let savedChecked = $state(false);
-	let completeLoading = $state(false);
-	let completeError = $state<string | null>(null);
 
 	async function submitEmail(e: SubmitEvent) {
 		e.preventDefault();
@@ -71,16 +49,12 @@
 		otpError = null;
 		otpLoading = true;
 		try {
-			const res = await apiFetch<{
-				verifiedToken: string;
-				passphrase: string;
-			}>("/auth/signup/verify-otp", {
+			await apiFetch("/auth/signup/verify-otp", {
 				method: "POST",
 				body: JSON.stringify({ email: signupEmail, otp }),
 			});
-			verifiedToken = res.verifiedToken;
-			passphrase = res.passphrase;
-			signupStep = 2;
+			await auth.initAuth();
+			onAuthSuccess();
 		} catch (err) {
 			otpError =
 				err instanceof Error ? err.message : "Verification failed";
@@ -89,33 +63,7 @@
 		}
 	}
 
-	async function copyPassphrase() {
-		await navigator.clipboard.writeText(passphrase);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	async function completeSignup() {
-		completeError = null;
-		completeLoading = true;
-		try {
-			await apiFetch<{ user: AuthUser }>("/auth/signup/complete", {
-				method: "POST",
-				body: JSON.stringify({ verifiedToken }),
-			});
-			await auth.initAuth();
-			onAuthSuccess();
-		} catch (err) {
-			completeError =
-				err instanceof Error
-					? err.message
-					: "Failed to complete signup";
-		} finally {
-			completeLoading = false;
-		}
-	}
-
-	const stepTitles = ["Your email", "Verify email", "Your passphrase"];
+	const stepTitles = ["Your email", "Verify email"];
 </script>
 
 <Dialog
@@ -157,49 +105,7 @@
 
 					<!-- Login Tab -->
 					<Tabs.Content value="login">
-						{#if auth.error}
-							<div
-								class="text-error-500 text-sm text-center p-3 bg-error-50 rounded-lg mb-4"
-							>
-								{auth.error}
-							</div>
-						{/if}
-
-						<form onsubmit={handleLogin} class="space-y-4">
-							<label class="block space-y-1">
-								<span class="text-sm font-medium">Email</span>
-								<input
-									type="email"
-									class="input"
-									bind:value={loginEmail}
-									required
-									autocomplete="username webauthn"
-									placeholder="you@example.com"
-								/>
-							</label>
-
-							<label class="block space-y-1">
-								<span class="text-sm font-medium"
-									>Passphrase</span
-								>
-								<input
-									type="password"
-									class="input font-mono"
-									bind:value={loginPassphrase}
-									required
-									autocomplete="current-password"
-									placeholder="word-word-word-word-0000"
-								/>
-							</label>
-
-							<button
-								type="submit"
-								class="btn preset-filled-primary-500 w-full"
-								disabled={auth.loading}
-							>
-								{auth.loading ? "Logging in…" : "Log In"}
-							</button>
-						</form>
+						<EmailCodeSignIn onSuccess={onAuthSuccess} />
 
 						<div class="mt-4">
 							<!-- Dialog content stays mounted while closed, so only
@@ -209,20 +115,13 @@
 								onSuccess={onAuthSuccess}
 							/>
 						</div>
-
-						<p class="text-sm text-center mt-4">
-							<a
-								href={resolve("/reset-password")}
-								class="underline">Forgot your passphrase?</a
-							>
-						</p>
 					</Tabs.Content>
 
 					<!-- Signup Tab -->
 					<Tabs.Content value="signup">
 						<Steps
 							step={signupStep}
-							count={3}
+							count={2}
 							linear
 							class="w-full"
 						>
@@ -335,8 +234,8 @@
 											otp.length !== 6}
 									>
 										{otpLoading
-											? "Verifying…"
-											: "Verify code"}
+											? "Creating account…"
+											: "Create account"}
 									</button>
 								</form>
 
@@ -355,66 +254,6 @@
 										Go back and resend
 									</button>
 								</p>
-							</Steps.Content>
-
-							<!-- Step 2: Passphrase handover -->
-							<Steps.Content index={2}>
-								<div class="space-y-4">
-									<p class="text-sm text-surface-500">
-										Save this passphrase — you'll need it to
-										log in. This is the only time you'll see
-										it.
-									</p>
-
-									<div class="relative">
-										<div
-											class="font-mono text-base font-semibold tracking-wide bg-surface-100-800 border border-surface-300 rounded-xl px-4 py-3 break-all select-all"
-										>
-											{passphrase}
-										</div>
-										<button
-											class="btn preset-tonal-primary mt-2 w-full"
-											onclick={copyPassphrase}
-										>
-											{copied
-												? "✓ Copied!"
-												: "Copy to clipboard"}
-										</button>
-									</div>
-
-									{#if completeError}
-										<div
-											class="text-error-500 text-sm p-3 bg-error-50 rounded-lg"
-										>
-											{completeError}
-										</div>
-									{/if}
-
-									<label
-										class="flex items-start gap-3 cursor-pointer"
-									>
-										<input
-											type="checkbox"
-											class="checkbox mt-0.5 shrink-0"
-											bind:checked={savedChecked}
-										/>
-										<span class="text-sm leading-snug">
-											I have saved this passphrase in a
-											safe place.
-										</span>
-									</label>
-
-									<button
-										class="btn preset-filled-primary-500 w-full"
-										disabled={!savedChecked ||
-											completeLoading}
-										onclick={completeSignup}
-									>
-										{completeLoading
-											? "Finishing…"
-											: "Complete signup"}
-									</button>
-								</div>
 							</Steps.Content>
 						</Steps>
 					</Tabs.Content>

@@ -69,10 +69,7 @@ function getCookie(res: Response, name: string): string | undefined {
 }
 
 async function createUser(email: string): Promise<User> {
-	const [user] = await db
-		.insert(users)
-		.values({ email, passphraseHash: "unused" })
-		.returning();
+	const [user] = await db.insert(users).values({ email }).returning();
 	return user;
 }
 

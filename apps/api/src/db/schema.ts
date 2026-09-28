@@ -25,7 +25,6 @@ const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
 export const users = pgTable("users", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	email: varchar("email", { length: 255 }).notNull().unique(),
-	passphraseHash: varchar("passphrase_hash", { length: 255 }).notNull(),
 	// WebAuthn user handle: a stable random ID handed to authenticators instead
 	// of the DB id or email. Passkey sign-in checks it against the assertion.
 	webauthnUserId: uuid("webauthn_user_id").defaultRandom().notNull().unique(),
@@ -45,12 +44,9 @@ export const emailVerifications = pgTable("email_verifications", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	email: varchar("email", { length: 255 }).notNull(),
 	otpHash: varchar("otp_hash", { length: 255 }).notNull(),
-	type: varchar("type", { length: 20 }).notNull(), // 'signup' | 'password_reset'
+	type: varchar("type", { length: 20 }).notNull(), // 'signup' | 'sign_in'
 	attempts: integer("attempts").default(0).notNull(),
 	expiresAt: timestamp("expires_at").notNull(),
-	verifiedAt: timestamp("verified_at"),
-	verifiedToken: uuid("verified_token"),
-	passphraseHash: varchar("passphrase_hash", { length: 255 }),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
