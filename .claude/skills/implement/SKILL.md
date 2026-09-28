@@ -24,15 +24,19 @@ Name it `{TICKET-ID}/{kebab-case-title}`, e.g. `KDA-56/add-page-thumbnails`, usi
 
 If no ticket ID can be found, use `chore/…` or `bugfix/…` as fits, or ask the user.
 
-## 4. Tests first
+## 4. Set the ticket to In Progress
+
+If there's a Linear ID, move it to "In Progress" (`mcp__linear__save_issue` / equivalent status update) as soon as work starts — right after the branch is created, before any file edits.
+
+## 5. Tests first
 
 Write or extend tests covering the new behavior, run them, and confirm they **fail** for the right reason. A test that passes before the change proves nothing.
 
-## 5. Implement the minimal change
+## 6. Implement the minimal change
 
 Only what the requirement needs. No speculative abstractions, drive-by refactors, or unrelated cleanups — they bloat the diff and hide the real change.
 
-## 6. Verify
+## 7. Verify
 
 ```bash
 pnpm run lint && pnpm test
@@ -40,7 +44,7 @@ pnpm run lint && pnpm test
 
 Fix until green. Don't start, restart, or kill the dev server — the user runs their own.
 
-## 7. Self-review
+## 8. Self-review
 
 Read the full diff (`git diff main...`) and check:
 
@@ -48,7 +52,7 @@ Read the full diff (`git diff main...`) and check:
 - No new dependencies without a stated reason
 - Error paths handled (failed fetches, empty/invalid input, Wasm failures)
 
-## 8. Summarize
+## 9. Summarize
 
 Report:
 
