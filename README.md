@@ -69,3 +69,44 @@ boundaries you would have drawn by hand. The harness scores both providers per
 fixture and sweeps every candidate threshold over Jev's probabilities, ranking
 by F2 (a missed boundary costs more than a spurious one, which the user can
 delete in one click).
+
+### Email (sign-in and signup codes)
+
+Signup and email-code sign-in send a 6-digit code through MailerSend
+(`apps/api/src/lib/email.ts`). It's configured by two variables in
+`apps/api/.env`: `MAILERSEND_API_KEY`, and `MAILERSEND_FROM_EMAIL`, which takes
+a full address or a bare domain (a bare domain becomes `noreply@<domain>`).
+
+**Local development needs no email.** With `NODE_ENV=development`, the API
+prints the code in its terminal instead of sending it:
+
+```
+[email] dev mode — signup code for you@example.com: 305178
+```
+
+Copy the code from there. It's random each time, and still expires after 10
+minutes and allows 3 attempts.
+
+**Real email needs a verified sender domain.** MailerSend only sends from a
+domain in your account that is verified through DNS records (SPF, DKIM) at
+your registrar. `localhost` can't be verified, but a local app can send
+through any domain you own. MailerSend's test domains (`test-….mlsender.net`)
+are temporary: they usually deliver only to the MailerSend account owner's
+exact address (a `+alias` counts as a different address), and MailerSend can
+remove them, for example when an account drops to sandbox mode.
+
+#### When a code email doesn't arrive
+
+1. **Is the address new to that flow?** By design, signup with an email that
+   already has an account sends nothing, and so does sign-in with an unknown
+   email. Both still show the "check your inbox" screen, so the endpoints
+   can't be used to find out which emails have accounts.
+2. **Check the address on the "check your inbox" screen.** A typo like
+   `gmail.co` goes nowhere.
+3. **Check the API terminal.** Sends are fire-and-forget, so the page reports
+   success even when MailerSend refuses. A refusal is logged as
+   `[email] <type> OTP send failed:` followed by MailerSend's response.
+   `#MS42207` ("The from.email domain must be verified") means the sender
+   domain is missing or unverified: check MailerSend → Email → Domains.
+4. **Don't look for the code in the database.** `email_verifications` only
+   stores a bcrypt hash, which can't be turned back into the code.

@@ -13,6 +13,7 @@
 		"preview": "pnpm --filter @web preview",
 		"check": "pnpm --filter @web check",
 		"test": "pnpm --filter @web --filter @api test",
+		"test:watch": "pnpm --filter @web --filter @api test:watch",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
