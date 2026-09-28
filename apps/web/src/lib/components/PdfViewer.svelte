@@ -21,6 +21,7 @@
 	import { printPdfBytes } from "$lib/services/printPdf";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { toaster } from "$lib/stores/toaster";
+	import { createEditHistory } from "$lib/stores/editHistory";
 	import PdfPage from "./PdfPage.svelte";
 	import PrintButton from "./PrintButton.svelte";
 	import XIcon from "./icons/XIcon.svelte";
@@ -129,6 +130,49 @@
 	let insertModalOpen = $state(false);
 	let pendingInsert: (ConfirmPayload & { sourceId: string }) | null =
 		$state(null);
+
+	// Undo/redo (KDA-56). Only the edit state is recorded — selection is not.
+	// Inserts reference `sources` by id, so sources stay alive for the whole
+	// edit session (only destroyed on exit) and redo never hits a freed doc.
+	interface EditSnapshot {
+		splitPoints: number[];
+		deletedPages: number[];
+		insertedPages: InsertedPage[];
+	}
+	const history = createEditHistory<EditSnapshot>();
+
+	function snapshotEdits(): EditSnapshot {
+		return {
+			splitPoints: [...splitPoints],
+			deletedPages: [...deletedPages],
+			insertedPages: $state.snapshot(insertedPages),
+		};
+	}
+
+	function recordEdit() {
+		history.record(snapshotEdits());
+	}
+
+	function restoreEdits(snapshot: EditSnapshot) {
+		// Positions shift when inserts come or go — drop the stale selection.
+		if (snapshot.insertedPages.length !== insertedPages.length)
+			clearSelection();
+		splitPoints.clear();
+		for (const k of snapshot.splitPoints) splitPoints.add(k);
+		deletedPages.clear();
+		for (const k of snapshot.deletedPages) deletedPages.add(k);
+		insertedPages = snapshot.insertedPages;
+	}
+
+	function undo() {
+		const prev = history.undo(snapshotEdits());
+		if (prev) restoreEdits(prev);
+	}
+
+	function redo() {
+		const next = history.redo(snapshotEdits());
+		if (next) restoreEdits(next);
+	}
 
 	function buildSequence(
 		originalPages: PageData[],
@@ -387,6 +431,8 @@
 	// `pendingInsert.sourceId` is always present in `sources` (handleInsertConfirm pushes
 	// before stashing pendingInsert), so the loop covers it.
 	$effect(() => {
+		// Fresh history on entering and exiting Edit Mode.
+		history.clear();
 		if (splitMode) return;
 		untrack(() => {
 			for (const s of sources) {
@@ -469,6 +515,7 @@
 			}),
 		);
 
+		recordEdit();
 		// Rebase existing splitPoints / deletedPages: any k >= position shifts by +n.
 		const rebasedSplits = [...splitPoints].map((k) =>
 			k >= position ? k + n : k,
@@ -489,6 +536,7 @@
 	}
 
 	function toggleSplitPoint(position: number) {
+		recordEdit();
 		if (splitPoints.has(position)) {
 			splitPoints.delete(position);
 		} else {
@@ -528,6 +576,7 @@
 
 			// Trust nothing: keep only valid non-final positions.
 			const maxValid = combinedSequence.length - 1;
+			recordEdit();
 			splitPoints.clear();
 			for (const p of splitAfter) {
 				if (Number.isInteger(p) && p >= 0 && p < maxValid) {
@@ -563,6 +612,7 @@
 				? [...selectedPositions]
 				: [position];
 		const allExcluded = targets.every((p) => deletedPages.has(p));
+		recordEdit();
 		for (const p of targets) {
 			if (allExcluded) deletedPages.delete(p);
 			else deletedPages.add(p);
@@ -618,6 +668,7 @@
 
 	function excludeSelected() {
 		if (selectedToExclude.length === 0) return;
+		recordEdit();
 		for (const p of selectedToExclude) deletedPages.add(p);
 		// Keep the selection so undoing a marker re-surfaces the button.
 	}
@@ -766,7 +817,7 @@
 			return;
 		}
 
-		// Edit Mode page-selection shortcuts (ignored while typing in a field).
+		// Edit Mode selection and undo/redo shortcuts (ignored while typing in a field).
 		if (splitMode && !isEditableTarget(e)) {
 			if (e.code === "Escape" && selectedPositions.size > 0) {
 				e.preventDefault();
@@ -784,6 +835,23 @@
 			if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === "KeyA") {
 				e.preventDefault();
 				selectAll();
+				return;
+			}
+			if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === "KeyZ") {
+				e.preventDefault();
+				if (e.shiftKey) redo();
+				else undo();
+				return;
+			}
+			if (
+				e.ctrlKey &&
+				!e.metaKey &&
+				!e.altKey &&
+				!e.shiftKey &&
+				e.code === "KeyY"
+			) {
+				e.preventDefault();
+				redo();
 				return;
 			}
 		}
