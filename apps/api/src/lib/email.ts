@@ -16,6 +16,13 @@ export async function sendOtpEmail(
 	otp: string,
 	type: "signup" | "sign_in",
 ): Promise<void> {
+	// Local development needs no verified sender domain: read the code from
+	// the API terminal instead of an inbox. Never enabled in production.
+	if (process.env.NODE_ENV === "development") {
+		console.info(`[email] dev mode — ${type} code for ${to}: ${otp}`);
+		return;
+	}
+
 	const subject =
 		type === "signup"
 			? "Confirm your email — PDF Viewer"
