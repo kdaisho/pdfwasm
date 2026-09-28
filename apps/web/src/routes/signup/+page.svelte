@@ -146,7 +146,7 @@
 			});
 			await auth.initAuth();
 			sessionStorage.removeItem(STORAGE_KEY);
-			goto(resolve("/"));
+			goto(resolve("/"), { invalidateAll: true });
 		} catch (err) {
 			completeError =
 				err instanceof Error
