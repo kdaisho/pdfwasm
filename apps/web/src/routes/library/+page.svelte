@@ -3,6 +3,7 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import PdfCard from "$lib/components/PdfCard.svelte";
+	import PdfDropZone from "$lib/components/PdfDropZone.svelte";
 	import PdfLibrarySidebar from "$lib/components/PdfLibrarySidebar.svelte";
 	import { deletePdf, type PdfDocumentMeta } from "$lib/services/pdf-api";
 	import { currentPdfStore } from "$lib/stores/currentPdf.svelte.js";
@@ -58,7 +59,15 @@
 	});
 
 	onDestroy(() => sidebarStore.clear());
+
+	// A dropped file opens in the viewer, same hand-off as the sidebar picker.
+	function openDroppedFile(file: File) {
+		pendingPdfStore.request({ type: "file", file });
+		goto(resolve("/"));
+	}
 </script>
+
+<PdfDropZone onFile={openDroppedFile} />
 
 <div class="px-[34px] pb-16 pt-[30px]">
 	<div class="mb-6">

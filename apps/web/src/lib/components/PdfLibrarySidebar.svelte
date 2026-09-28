@@ -2,11 +2,12 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
+	import { takePdf } from "$lib/utils/takePdf";
 
 	// Opening a local file is a viewer action; stash the file and hand off to /.
 	function handleFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
+		const file = takePdf(input.files);
 		if (file) {
 			pendingPdfStore.request({ type: "file", file });
 			goto(resolve("/"));
