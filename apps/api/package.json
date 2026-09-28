@@ -14,7 +14,8 @@
 		"db:check": "drizzle-kit check",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:watch": "vitest watch"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.102.0",
