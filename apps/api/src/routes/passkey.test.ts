@@ -28,16 +28,25 @@ type Cookies = Record<string, string>;
 // rate limiter only trips in the test that targets it.
 let ipCounter = 0;
 
-function post(
+interface RequestOptions {
+	body?: unknown;
+	cookies?: Cookies;
+	ip?: string;
+	headers?: Record<string, string>;
+}
+
+function post(path: string, options: RequestOptions = {}) {
+	return send("POST", path, options);
+}
+
+function send(
+	method: string,
 	path: string,
-	{
-		body,
-		cookies,
-		ip,
-	}: { body?: unknown; cookies?: Cookies; ip?: string } = {},
+	{ body, cookies, ip, headers: extraHeaders }: RequestOptions = {},
 ) {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
+		...extraHeaders,
 	};
 	if (cookies) {
 		headers.Cookie = Object.entries(cookies)
@@ -47,7 +56,7 @@ function post(
 	return app.request(
 		`/api/auth/passkey${path}`,
 		{
-			method: "POST",
+			method,
 			headers,
 			body: body === undefined ? undefined : JSON.stringify(body),
 		},
@@ -77,7 +86,11 @@ async function sessionFor(user: User): Promise<Cookies> {
 	return { [SESSION_COOKIE_NAME]: await createSession(user.id) };
 }
 
-async function savePasskey(user: User, authenticator: Authenticator) {
+async function savePasskey(
+	user: User,
+	authenticator: Authenticator,
+	extra: Partial<typeof passkeys.$inferInsert> = {},
+) {
 	await db.insert(passkeys).values({
 		id: authenticator.credentialId,
 		userId: user.id,
@@ -85,6 +98,7 @@ async function savePasskey(user: User, authenticator: Authenticator) {
 		deviceType: "multiDevice",
 		backedUp: true,
 		transports: ["internal"],
+		...extra,
 	});
 }
 
@@ -370,7 +384,15 @@ describe("registration", () => {
 		});
 
 		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ ok: true });
+		expect(await res.json()).toEqual({
+			passkey: {
+				id: authenticator.credentialId,
+				name: "Passkey",
+				createdAt: expect.any(String),
+				lastUsedAt: null,
+				backedUp: true,
+			},
+		});
 		expect(getCookie(res, WEBAUTHN_CHALLENGE_COOKIE_NAME)).toBeUndefined();
 
 		const passkey = await getPasskey(authenticator.credentialId);
@@ -383,6 +405,27 @@ describe("registration", () => {
 			lastUsedAt: null,
 		});
 		expect(passkey.publicKey).toEqual(authenticator.cosePublicKey);
+	});
+
+	it("names the passkey after the registering browser", async () => {
+		const authenticator = createAuthenticator(rp);
+		const { options, cookies } = await startRegistration(
+			await sessionFor(alice),
+		);
+
+		const res = await post("/registration/verify", {
+			cookies,
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+			},
+			body: authenticator.register(options.challenge),
+		});
+
+		expect(res.status).toBe(200);
+		expect((await getPasskey(authenticator.credentialId)).name).toBe(
+			"Chrome on macOS",
+		);
 	});
 
 	it("rejects a challenge issued to another account", async () => {
@@ -419,5 +462,155 @@ describe("registration", () => {
 		});
 		expect(replay.status).toBe(400);
 		expect(await getPasskey(second.credentialId)).toBeUndefined();
+	});
+});
+
+describe("passkey management", () => {
+	let alice: User;
+	let bob: User;
+	let aliceKey: Authenticator;
+	let bobKey: Authenticator;
+
+	beforeEach(async () => {
+		alice = await createUser("alice@example.com");
+		bob = await createUser("bob@example.com");
+		aliceKey = createAuthenticator(rp);
+		bobKey = createAuthenticator(rp);
+		await savePasskey(alice, aliceKey, { name: "Chrome on macOS" });
+		await savePasskey(bob, bobKey);
+	});
+
+	const path = (id: string) => `/credentials/${encodeURIComponent(id)}`;
+
+	it("requires a session", async () => {
+		expect((await send("GET", "/credentials")).status).toBe(401);
+		expect(
+			(
+				await send("PATCH", path(aliceKey.credentialId), {
+					body: { name: "Laptop" },
+				})
+			).status,
+		).toBe(401);
+		expect((await send("DELETE", path(aliceKey.credentialId))).status).toBe(
+			401,
+		);
+		expect(await getPasskey(aliceKey.credentialId)).toBeDefined();
+	});
+
+	describe("GET /credentials", () => {
+		it("lists only the session user's passkeys, oldest first", async () => {
+			const phone = createAuthenticator(rp);
+			const lastUsedAt = new Date("2026-09-01T12:00:00Z");
+			await savePasskey(alice, phone, {
+				name: "Safari on iPhone",
+				backedUp: false,
+				createdAt: new Date(Date.now() + 1000),
+				lastUsedAt,
+			});
+
+			const res = await send("GET", "/credentials", {
+				cookies: await sessionFor(alice),
+			});
+
+			expect(res.status).toBe(200);
+			const { passkeys: list } = await res.json();
+			expect(list).toEqual([
+				{
+					id: aliceKey.credentialId,
+					name: "Chrome on macOS",
+					createdAt: expect.any(String),
+					lastUsedAt: null,
+					backedUp: true,
+				},
+				{
+					id: phone.credentialId,
+					name: "Safari on iPhone",
+					createdAt: expect.any(String),
+					lastUsedAt: lastUsedAt.toISOString(),
+					backedUp: false,
+				},
+			]);
+		});
+
+		it("returns an empty list for a user without passkeys", async () => {
+			const carol = await createUser("carol@example.com");
+			const res = await send("GET", "/credentials", {
+				cookies: await sessionFor(carol),
+			});
+			expect(await res.json()).toEqual({ passkeys: [] });
+		});
+	});
+
+	describe("PATCH /credentials/:id", () => {
+		it("renames the passkey, trimming whitespace", async () => {
+			const res = await send("PATCH", path(aliceKey.credentialId), {
+				cookies: await sessionFor(alice),
+				body: { name: "  Work laptop  " },
+			});
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({
+				passkey: {
+					id: aliceKey.credentialId,
+					name: "Work laptop",
+					createdAt: expect.any(String),
+					lastUsedAt: null,
+					backedUp: true,
+				},
+			});
+			expect((await getPasskey(aliceKey.credentialId)).name).toBe(
+				"Work laptop",
+			);
+		});
+
+		it.each([
+			["an empty name", { name: "   " }],
+			["a name over 64 characters", { name: "x".repeat(65) }],
+			["a non-string name", { name: 42 }],
+			["a missing name", {}],
+		])("rejects %s", async (_, body) => {
+			const res = await send("PATCH", path(aliceKey.credentialId), {
+				cookies: await sessionFor(alice),
+				body,
+			});
+
+			expect(res.status).toBe(400);
+			expect((await getPasskey(aliceKey.credentialId)).name).toBe(
+				"Chrome on macOS",
+			);
+		});
+
+		it("cannot rename another user's passkey", async () => {
+			const res = await send("PATCH", path(bobKey.credentialId), {
+				cookies: await sessionFor(alice),
+				body: { name: "Mine now" },
+			});
+
+			expect(res.status).toBe(404);
+			expect((await getPasskey(bobKey.credentialId)).name).toBe(
+				"Passkey",
+			);
+		});
+	});
+
+	describe("DELETE /credentials/:id", () => {
+		it("deletes the passkey, even the user's last one", async () => {
+			const res = await send("DELETE", path(aliceKey.credentialId), {
+				cookies: await sessionFor(alice),
+			});
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({ ok: true });
+			expect(await getPasskey(aliceKey.credentialId)).toBeUndefined();
+		});
+
+		it("cannot delete another user's passkey", async () => {
+			const res = await send("DELETE", path(bobKey.credentialId), {
+				cookies: await sessionFor(alice),
+			});
+
+			expect(res.status).toBe(404);
+			expect(await getPasskey(bobKey.credentialId)).toBeDefined();
+		});
 	});
 });

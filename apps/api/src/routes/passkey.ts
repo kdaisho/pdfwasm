@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { eq, lt, or } from "drizzle-orm";
+import { and, asc, eq, lt, or } from "drizzle-orm";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import {
 	generateAuthenticationOptions,
@@ -21,6 +21,7 @@ import {
 } from "../db/schema.js";
 import { createSession, setSessionCookie } from "../lib/session.js";
 import { webauthnConfig } from "../lib/webauthn.js";
+import { passkeyNameFromUserAgent } from "../lib/passkeyName.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import type { AuthEnv } from "../types.js";
@@ -114,6 +115,15 @@ function userHandleBytes(webauthnUserId: string): Uint8Array {
 async function readJson<T>(c: Context): Promise<T | null> {
 	return c.req.json<T>().catch(() => null);
 }
+
+// What the account page shows for each passkey
+const passkeySummary = {
+	id: passkeys.id,
+	name: passkeys.name,
+	createdAt: passkeys.createdAt,
+	lastUsedAt: passkeys.lastUsedAt,
+	backedUp: passkeys.backedUp,
+};
 
 const passkey = new Hono<AuthEnv>();
 
@@ -211,12 +221,77 @@ passkey.post("/registration/verify", async (c) => {
 			deviceType: credentialDeviceType,
 			backedUp: credentialBackedUp,
 			transports: credential.transports ?? null,
+			name: passkeyNameFromUserAgent(c.req.header("User-Agent")),
 		})
 		.onConflictDoNothing()
-		.returning({ id: passkeys.id });
+		.returning(passkeySummary);
 
 	if (inserted.length === 0) {
 		return c.json({ error: REGISTRATION_FAILED }, 400);
+	}
+
+	return c.json({ passkey: inserted[0] });
+});
+
+// ── Management (the signed-in user's own passkeys) ─────────────────────────
+
+// Matches the passkeys.name column
+const PASSKEY_NAME_MAX_LENGTH = 64;
+
+// Scopes every lookup to the session user, so another account's credential
+// ID behaves exactly like one that doesn't exist.
+function ownPasskey(c: Context<AuthEnv>) {
+	return and(
+		eq(passkeys.id, c.req.param("id")!),
+		eq(passkeys.userId, c.get("userId")),
+	);
+}
+
+passkey.get("/credentials", authMiddleware, async (c) => {
+	const list = await db
+		.select(passkeySummary)
+		.from(passkeys)
+		.where(eq(passkeys.userId, c.get("userId")))
+		.orderBy(asc(passkeys.createdAt));
+
+	return c.json({ passkeys: list });
+});
+
+passkey.patch("/credentials/:id", authMiddleware, async (c) => {
+	const body = await readJson<{ name?: unknown }>(c);
+	const name = typeof body?.name === "string" ? body.name.trim() : "";
+
+	if (!name || name.length > PASSKEY_NAME_MAX_LENGTH) {
+		return c.json(
+			{
+				error: `Passkey names must be 1–${PASSKEY_NAME_MAX_LENGTH} characters.`,
+			},
+			400,
+		);
+	}
+
+	const [updated] = await db
+		.update(passkeys)
+		.set({ name })
+		.where(ownPasskey(c))
+		.returning(passkeySummary);
+
+	if (!updated) {
+		return c.json({ error: "Passkey not found" }, 404);
+	}
+
+	return c.json({ passkey: updated });
+});
+
+// Deleting the last passkey is fine: email-code sign-in always remains.
+passkey.delete("/credentials/:id", authMiddleware, async (c) => {
+	const deleted = await db
+		.delete(passkeys)
+		.where(ownPasskey(c))
+		.returning({ id: passkeys.id });
+
+	if (deleted.length === 0) {
+		return c.json({ error: "Passkey not found" }, 404);
 	}
 
 	return c.json({ ok: true });

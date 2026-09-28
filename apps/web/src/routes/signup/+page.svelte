@@ -3,6 +3,8 @@
 	import { resolve } from "$app/paths";
 	import { onMount } from "svelte";
 	import { Steps } from "@skeletonlabs/skeleton-svelte";
+	import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
+	import PasskeyEnroll from "$lib/components/PasskeyEnroll.svelte";
 	import StepIndicator from "$lib/components/StepIndicator.svelte";
 	import { apiFetch } from "$lib/services/api.js";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
@@ -22,6 +24,10 @@
 	let otpError = $state<string | null>(null);
 	let otpLoading = $state(false);
 
+	// Step 3 – passkey, offered only where the browser can create one.
+	// Resolved on the client only, so SSR and hydration render the same markup.
+	let passkeysSupported = $state(false);
+
 	const STORAGE_KEY = "signup_state";
 
 	function persistState() {
@@ -40,6 +46,7 @@
 	}
 
 	onMount(() => {
+		passkeysSupported = browserSupportsWebAuthn();
 		try {
 			const raw = sessionStorage.getItem(STORAGE_KEY);
 			if (!raw) return;
@@ -97,7 +104,8 @@
 			});
 			await auth.initAuth();
 			sessionStorage.removeItem(STORAGE_KEY);
-			goto(resolve("/"), { invalidateAll: true });
+			if (passkeysSupported) step = 2;
+			else goHome();
 		} catch (err) {
 			otpError =
 				err instanceof Error ? err.message : "Verification failed";
@@ -106,7 +114,15 @@
 		}
 	}
 
-	const stepTitles = ["Your email", "Verify email"];
+	function goHome() {
+		goto(resolve("/"), { invalidateAll: true });
+	}
+
+	const stepTitles = $derived(
+		passkeysSupported
+			? ["Your email", "Verify email", "Passkey"]
+			: ["Your email", "Verify email"],
+	);
 </script>
 
 <div class="flex items-center justify-center min-h-screen px-4 py-12">
@@ -119,7 +135,7 @@
 			</p>
 		</div>
 
-		<Steps {step} count={2} linear class="w-full">
+		<Steps {step} count={stepTitles.length} linear class="w-full">
 			<StepIndicator {step} titles={stepTitles} />
 
 			<!-- Step 0: Email -->
@@ -231,6 +247,21 @@
 					</p>
 				</div>
 			</Steps.Content>
+
+			<!-- Step 2: Passkey (the account exists and is signed in by now) -->
+			{#if passkeysSupported}
+				<Steps.Content index={2}>
+					<div
+						class="card preset-outlined-surface-200 p-6 rounded-xl"
+					>
+						<PasskeyEnroll
+							onCreated={goHome}
+							onSkip={goHome}
+							skipLabel="Skip for now"
+						/>
+					</div>
+				</Steps.Content>
+			{/if}
 		</Steps>
 	</div>
 </div>

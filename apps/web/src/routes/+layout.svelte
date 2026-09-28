@@ -70,8 +70,14 @@
 					<p class="text-[11px] text-surface-400 truncate mb-2">
 						{auth.user?.email}
 					</p>
+					<a
+						href={resolve("/account")}
+						class="block w-full py-1.75 mb-2 rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium text-center hover:bg-surface-100 transition-colors"
+					>
+						Account
+					</a>
 					<button
-						class="w-full py-[7px] rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium hover:bg-surface-100 transition-colors"
+						class="w-full py-1.75 rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium hover:bg-surface-100 transition-colors"
 						onclick={async () => {
 							await auth.logout();
 							goto(resolve("/"), { invalidateAll: true });
@@ -83,13 +89,13 @@
 					<div class="flex flex-col gap-2">
 						<a
 							href={resolve("/login")}
-							class="w-full py-[7px] rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium text-center hover:bg-surface-100 transition-colors"
+							class="w-full py-1.75 rounded-lg border border-surface-200 bg-white text-surface-500 text-[12px] font-medium text-center hover:bg-surface-100 transition-colors"
 						>
 							Log In
 						</a>
 						<a
 							href={resolve("/signup")}
-							class="w-full py-[7px] rounded-lg border-none text-white text-[12px] font-medium text-center"
+							class="w-full py-1.75 rounded-lg border-none text-white text-[12px] font-medium text-center"
 							style="background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-400))"
 						>
 							Sign Up
