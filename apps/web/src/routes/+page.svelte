@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
+	import PdfDropZone from "$lib/components/PdfDropZone.svelte";
 	import PdfSidebarItems from "$lib/components/PdfSidebarItems.svelte";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
 	import { ZOOM_BASE_WIDTH } from "$lib/constants/zoom";
@@ -11,6 +12,7 @@
 	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
 	import { formatFileSize } from "$lib/utils/format";
+	import { takePdf } from "$lib/utils/takePdf";
 	import type { PageData as PdfPageData } from "$lib/types";
 
 	let { data } = $props();
@@ -202,7 +204,7 @@
 
 	function handleFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
+		const file = takePdf(input.files);
 		if (file) void loadFile(file);
 	}
 
@@ -259,6 +261,8 @@
 		sidebarStore.clear();
 	});
 </script>
+
+<PdfDropZone onFile={(file) => void loadFile(file)} />
 
 {#if libLoading}
 	<div
