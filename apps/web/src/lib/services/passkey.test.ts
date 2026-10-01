@@ -14,6 +14,7 @@ import {
 	listPasskeys,
 	passkeyRegistrationError,
 	PasskeyVerificationError,
+	prefersPasskey,
 	registerPasskey,
 	renamePasskey,
 	shouldPromptForPasskey,
@@ -37,34 +38,29 @@ describe("signInWithPasskey", () => {
 		vi.mocked(startAuthentication).mockReset();
 	});
 
-	it.each([true, false])(
-		"fetches options, runs the ceremony (autofill: %s), then verifies the assertion",
-		async (useBrowserAutofill) => {
-			vi.mocked(apiFetch)
-				.mockResolvedValueOnce(optionsJSON)
-				.mockResolvedValueOnce({ user: { id: "u1" } });
-			vi.mocked(startAuthentication).mockResolvedValue(
-				assertion as never,
-			);
+	it("fetches options for the email, runs the ceremony, then verifies the assertion", async () => {
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockResolvedValueOnce({ user: { id: "u1" } });
+		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
 
-			await signInWithPasskey(useBrowserAutofill);
+		await signInWithPasskey("alice@example.com");
 
-			expect(apiFetch).toHaveBeenNthCalledWith(
-				1,
-				"/auth/passkey/authentication/options",
-				{ method: "POST" },
-			);
-			expect(startAuthentication).toHaveBeenCalledWith({
-				optionsJSON,
-				useBrowserAutofill,
-			});
-			expect(apiFetch).toHaveBeenNthCalledWith(
-				2,
-				"/auth/passkey/authentication/verify",
-				{ method: "POST", body: JSON.stringify(assertion) },
-			);
-		},
-	);
+		expect(apiFetch).toHaveBeenNthCalledWith(
+			1,
+			"/auth/passkey/authentication/options",
+			{
+				method: "POST",
+				body: JSON.stringify({ email: "alice@example.com" }),
+			},
+		);
+		expect(startAuthentication).toHaveBeenCalledWith({ optionsJSON });
+		expect(apiFetch).toHaveBeenNthCalledWith(
+			2,
+			"/auth/passkey/authentication/verify",
+			{ method: "POST", body: JSON.stringify(assertion) },
+		);
+	});
 
 	it("throws PasskeyVerificationError when the server rejects the assertion", async () => {
 		vi.mocked(apiFetch)
@@ -72,15 +68,17 @@ describe("signInWithPasskey", () => {
 			.mockRejectedValueOnce(new Error("API error: 400"));
 		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
 
-		await expect(signInWithPasskey(true)).rejects.toBeInstanceOf(
-			PasskeyVerificationError,
-		);
+		await expect(
+			signInWithPasskey("alice@example.com"),
+		).rejects.toBeInstanceOf(PasskeyVerificationError);
 	});
 
 	it("does not wrap a failure to fetch options", async () => {
 		vi.mocked(apiFetch).mockRejectedValueOnce(new Error("API error: 429"));
 
-		const err = await signInWithPasskey(true).catch((e: unknown) => e);
+		const err = await signInWithPasskey("alice@example.com").catch(
+			(e: unknown) => e,
+		);
 		expect(err).not.toBeInstanceOf(PasskeyVerificationError);
 		expect(startAuthentication).not.toHaveBeenCalled();
 	});
@@ -91,7 +89,9 @@ describe("signInWithPasskey", () => {
 			new DOMException("cancelled", "NotAllowedError"),
 		);
 
-		await expect(signInWithPasskey(false)).rejects.toThrow("cancelled");
+		await expect(signInWithPasskey("alice@example.com")).rejects.toThrow(
+			"cancelled",
+		);
 		expect(apiFetch).toHaveBeenCalledTimes(1);
 	});
 });
@@ -110,7 +110,7 @@ describe("isPasskeyCancellation", () => {
 		).toBe(true);
 	});
 
-	it("treats an aborted autofill request as a cancellation", () => {
+	it("treats an aborted request as a cancellation", () => {
 		const cause = new Error("Cancelling existing WebAuthn API call");
 		cause.name = "AbortError";
 		expect(
@@ -314,5 +314,95 @@ describe("shouldPromptForPasskey", () => {
 
 		expect(() => dismissPasskeyPrompt("u1")).not.toThrow();
 		expect(await shouldPromptForPasskey("u1")).toBe(true);
+	});
+});
+
+describe("prefersPasskey", () => {
+	let storage: Map<string, string>;
+
+	beforeEach(() => {
+		vi.mocked(apiFetch).mockReset();
+		vi.mocked(startAuthentication).mockReset();
+		vi.mocked(startRegistration).mockReset();
+		vi.mocked(browserSupportsWebAuthn).mockReturnValue(true);
+		storage = new Map();
+		vi.stubGlobal("localStorage", {
+			getItem: (key: string) => storage.get(key) ?? null,
+			setItem: (key: string, value: string) => storage.set(key, value),
+		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("is false on a device that hasn't used a passkey", () => {
+		expect(prefersPasskey()).toBe(false);
+	});
+
+	it("turns true after a passkey sign-in on this device", async () => {
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockResolvedValueOnce({ user: { id: "u1" } });
+		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
+
+		await signInWithPasskey("alice@example.com");
+
+		expect(prefersPasskey()).toBe(true);
+	});
+
+	it("turns true after creating a passkey on this device", async () => {
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockResolvedValueOnce({ passkey: { id: "cred-2" } });
+		vi.mocked(startRegistration).mockResolvedValue({
+			id: "cred-2",
+		} as never);
+
+		await registerPasskey();
+
+		expect(prefersPasskey()).toBe(true);
+	});
+
+	it("stays false when the sign-in is rejected", async () => {
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockRejectedValueOnce(new Error("API error: 400"));
+		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
+
+		await signInWithPasskey("alice@example.com").catch(() => {});
+
+		expect(prefersPasskey()).toBe(false);
+	});
+
+	it("is false when the browser lacks WebAuthn", async () => {
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockResolvedValueOnce({ user: { id: "u1" } });
+		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
+		await signInWithPasskey("alice@example.com");
+
+		vi.mocked(browserSupportsWebAuthn).mockReturnValue(false);
+		expect(prefersPasskey()).toBe(false);
+	});
+
+	it("still signs in when storage is unavailable", async () => {
+		vi.stubGlobal("localStorage", {
+			getItem: () => {
+				throw new Error("SecurityError");
+			},
+			setItem: () => {
+				throw new Error("SecurityError");
+			},
+		});
+		vi.mocked(apiFetch)
+			.mockResolvedValueOnce(optionsJSON)
+			.mockResolvedValueOnce({ user: { id: "u1" } });
+		vi.mocked(startAuthentication).mockResolvedValue(assertion as never);
+
+		await expect(signInWithPasskey("alice@example.com")).resolves.toBe(
+			undefined,
+		);
+		expect(prefersPasskey()).toBe(false);
 	});
 });

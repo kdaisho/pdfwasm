@@ -1,12 +1,20 @@
 <script lang="ts">
+	import { onMount, type Snippet } from "svelte";
 	import { apiFetch } from "$lib/services/api.js";
+	import { prefersPasskey } from "$lib/services/passkey.js";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 
 	interface Props {
 		onSuccess: () => void;
+		/**
+		 * The passkey sign-in for the entered email (PasskeySignIn), rendered
+		 * in the email form. `primary` is true on a device that has used a
+		 * passkey before; the email code then steps back to a link.
+		 */
+		passkey?: Snippet<[email: string, primary: boolean]>;
 	}
 
-	let { onSuccess }: Props = $props();
+	let { onSuccess, passkey }: Props = $props();
 
 	const auth = getAuth();
 
@@ -15,6 +23,14 @@
 	let codeSent = $state(false);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+
+	// The hint lives in localStorage, so it's read on the client; the buttons
+	// wait for it rather than swap places after hydration.
+	let leadWithPasskey = $state<boolean | null>(null);
+
+	onMount(() => {
+		leadWithPasskey = passkey !== undefined && prefersPasskey();
+	});
 
 	async function requestCode(e: SubmitEvent) {
 		e.preventDefault();
@@ -71,24 +87,37 @@
 		<form onsubmit={requestCode} class="space-y-4">
 			<label class="block space-y-1">
 				<span class="text-sm font-medium">Email</span>
-				<!-- "webauthn" lets PasskeySignIn offer passkeys in this field's autofill -->
 				<input
 					type="email"
 					class="input"
 					bind:value={email}
 					required
-					autocomplete="username webauthn"
+					autocomplete="username"
 					placeholder="you@example.com"
 				/>
 			</label>
 
-			<button
-				type="submit"
-				class="btn preset-filled-primary-500 w-full"
-				disabled={loading}
-			>
-				{loading ? "Sending code…" : "Email me a code"}
-			</button>
+			{#if leadWithPasskey}
+				{@render passkey?.(email, true)}
+
+				<p class="text-sm text-center">
+					<button type="submit" class="underline" disabled={loading}>
+						{loading
+							? "Sending code…"
+							: "Use an email code instead"}
+					</button>
+				</p>
+			{:else if leadWithPasskey === false}
+				<button
+					type="submit"
+					class="btn preset-filled-primary-500 w-full"
+					disabled={loading}
+				>
+					{loading ? "Sending code…" : "Email me a code"}
+				</button>
+
+				{@render passkey?.(email, false)}
+			{/if}
 		</form>
 	{:else}
 		<p class="text-sm text-surface-500">

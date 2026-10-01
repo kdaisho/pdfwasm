@@ -121,9 +121,11 @@ export function createAuthenticator({
 			};
 		},
 
+		// Authenticators may omit userHandle when allowCredentials named the
+		// credential
 		authenticate(
 			challenge: string,
-			userHandle: string,
+			userHandle: string | undefined,
 		): AuthenticationResponseJSON {
 			counter += 1;
 			const authData = authenticatorData(

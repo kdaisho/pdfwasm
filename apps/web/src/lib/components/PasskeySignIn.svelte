@@ -1,28 +1,28 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import {
-		browserSupportsWebAuthn,
-		browserSupportsWebAuthnAutofill,
-		WebAuthnAbortService,
-	} from "@simplewebauthn/browser";
+	import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import {
 		isPasskeyCancellation,
 		PASSKEY_SIGN_IN_FAILED,
-		PasskeyVerificationError,
 		signInWithPasskey,
 	} from "$lib/services/passkey.js";
 
 	interface Props {
 		/**
-		 * Offer passkeys in the autofill of an `autocomplete="username webauthn"`
-		 * input while true. The request is aborted when this turns false.
+		 * The account to sign in to. Place this inside the form holding the
+		 * email input, so the button can check it the way submitting would.
 		 */
-		autofill: boolean;
+		email: string;
 		onSuccess: () => void;
+		/**
+		 * Lead the form: filled style, and the form's default button, so
+		 * pressing Enter in the email field signs in with a passkey
+		 */
+		primary?: boolean;
 	}
 
-	let { autofill, onSuccess }: Props = $props();
+	let { email, onSuccess, primary = false }: Props = $props();
 
 	const auth = getAuth();
 
@@ -35,42 +35,25 @@
 		supported = browserSupportsWebAuthn();
 	});
 
-	$effect(() => {
-		if (!autofill) return;
-		startAutofill();
-		return () => WebAuthnAbortService.cancelCeremony();
-	});
+	async function handleClick(
+		e: MouseEvent & { currentTarget: HTMLButtonElement },
+	) {
+		// Same validation as submitting, without submitting the form
+		e.preventDefault();
+		const form = e.currentTarget.form;
+		if (form && !form.reportValidity()) return;
 
-	async function startAutofill() {
-		if (!(await browserSupportsWebAuthnAutofill())) return;
-		await run(true);
-	}
-
-	async function run(useBrowserAutofill: boolean): Promise<boolean> {
-		try {
-			await signInWithPasskey(useBrowserAutofill);
-			await auth.initAuth();
-			onSuccess();
-			return true;
-		} catch (err) {
-			// Autofill runs unprompted, so it only reports a passkey the user
-			// actually picked being rejected
-			const report = useBrowserAutofill
-				? err instanceof PasskeyVerificationError
-				: !isPasskeyCancellation(err);
-			if (report) error = PASSKEY_SIGN_IN_FAILED;
-			return false;
-		}
-	}
-
-	async function handleClick() {
 		error = null;
 		pending = true;
-		// Starting a new ceremony aborts the pending autofill request
-		const signedIn = await run(false);
-		pending = false;
-		// Offer autofill again, e.g. after the user dismissed the dialog
-		if (!signedIn && autofill) startAutofill();
+		try {
+			await signInWithPasskey(email);
+			await auth.initAuth();
+			onSuccess();
+		} catch (err) {
+			if (!isPasskeyCancellation(err)) error = PASSKEY_SIGN_IN_FAILED;
+		} finally {
+			pending = false;
+		}
 	}
 </script>
 
@@ -85,8 +68,10 @@
 		{/if}
 
 		<button
-			type="button"
-			class="btn preset-tonal-primary w-full"
+			type={primary ? "submit" : "button"}
+			class="btn w-full {primary
+				? 'preset-filled-primary-500'
+				: 'preset-tonal-primary'}"
 			disabled={pending}
 			onclick={handleClick}
 		>

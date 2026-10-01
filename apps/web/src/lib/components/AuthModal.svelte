@@ -105,16 +105,15 @@
 
 					<!-- Login Tab -->
 					<Tabs.Content value="login">
-						<EmailCodeSignIn onSuccess={onAuthSuccess} />
-
-						<div class="mt-4">
-							<!-- Dialog content stays mounted while closed, so only
-							     run the autofill request while the modal is open -->
-							<PasskeySignIn
-								autofill={open}
-								onSuccess={onAuthSuccess}
-							/>
-						</div>
+						<EmailCodeSignIn onSuccess={onAuthSuccess}>
+							{#snippet passkey(email, primary)}
+								<PasskeySignIn
+									{email}
+									{primary}
+									onSuccess={onAuthSuccess}
+								/>
+							{/snippet}
+						</EmailCodeSignIn>
 					</Tabs.Content>
 
 					<!-- Signup Tab -->
