@@ -1,7 +1,11 @@
+import { randomBytes } from "node:crypto";
+
 export interface WebAuthnConfig {
 	rpID: string;
 	rpName: string;
 	origin: string;
+	/** Keys the decoy credential IDs given to emails without passkeys */
+	decoySecret: string;
 }
 
 /**
@@ -47,7 +51,20 @@ export function loadWebAuthnConfig(
 		);
 	}
 
-	return { rpID, rpName, origin };
+	// Decoys must stay stable across restarts in production, or an email's
+	// changing decoy would give away that it has no passkey. Development can
+	// make do with a per-process key.
+	let decoySecret = env.PASSKEY_DECOY_SECRET;
+	if (!decoySecret) {
+		if (env.NODE_ENV === "production") {
+			throw new Error(
+				"PASSKEY_DECOY_SECRET must be set in production (see apps/api/.env.example)",
+			);
+		}
+		decoySecret = randomBytes(32).toString("hex");
+	}
+
+	return { rpID, rpName, origin, decoySecret };
 }
 
 export const webauthnConfig = loadWebAuthnConfig(process.env);

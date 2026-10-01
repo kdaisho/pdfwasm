@@ -17,23 +17,18 @@ export class PasskeyVerificationError extends Error {
 }
 
 /**
- * Runs a discoverable-credential sign-in. With `useBrowserAutofill`, the
- * request stays pending until the user picks a passkey from the email field's
- * autofill (conditional UI); otherwise the browser shows its passkey dialog.
- * On success the session cookie is set; a rejected assertion throws
+ * Signs in with one of the passkeys of the account for `email`. Naming them
+ * keeps password managers that hold none of them (e.g. a locked 1Password)
+ * out of the way, so the browser's passkey picker handles the request. On
+ * success the session cookie is set; a rejected assertion throws
  * PasskeyVerificationError.
  */
-export async function signInWithPasskey(
-	useBrowserAutofill: boolean,
-): Promise<void> {
+export async function signInWithPasskey(email: string): Promise<void> {
 	const optionsJSON = await apiFetch<PublicKeyCredentialRequestOptionsJSON>(
 		"/auth/passkey/authentication/options",
-		{ method: "POST" },
+		{ method: "POST", body: JSON.stringify({ email }) },
 	);
-	const response = await startAuthentication({
-		optionsJSON,
-		useBrowserAutofill,
-	});
+	const response = await startAuthentication({ optionsJSON });
 	try {
 		await apiFetch("/auth/passkey/authentication/verify", {
 			method: "POST",
@@ -44,12 +39,38 @@ export async function signInWithPasskey(
 			cause: err,
 		});
 	}
+	rememberPasskeyUse();
+}
+
+// Per device, not per user: it's read before anyone has signed in. It only
+// decides which sign-in method the form leads with, so a stale value (passkey
+// since deleted, storage restored) costs nothing but emphasis.
+const PASSKEY_USED_KEY = "passkey_used_on_device";
+
+function rememberPasskeyUse(): void {
+	try {
+		localStorage.setItem(PASSKEY_USED_KEY, "1");
+	} catch {
+		// Storage unavailable (private mode, blocked site data): lead with email
+	}
+}
+
+/**
+ * Whether sign-in should lead with the passkey button: a passkey has signed
+ * in or been created in this browser before.
+ */
+export function prefersPasskey(): boolean {
+	if (!browserSupportsWebAuthn()) return false;
+	try {
+		return localStorage.getItem(PASSKEY_USED_KEY) !== null;
+	} catch {
+		return false;
+	}
 }
 
 /**
  * The user dismissed the passkey prompt (NotAllowedError), or the request was
- * aborted — e.g. the pending autofill request being replaced by the button
- * ceremony. Neither deserves an error message.
+ * aborted. Neither deserves an error message.
  */
 export function isPasskeyCancellation(err: unknown): boolean {
 	return (
@@ -81,6 +102,7 @@ export async function registerPasskey(): Promise<PasskeySummary> {
 		"/auth/passkey/registration/verify",
 		{ method: "POST", body: JSON.stringify(response) },
 	);
+	rememberPasskeyUse();
 	return res.passkey;
 }
 

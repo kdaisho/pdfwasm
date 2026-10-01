@@ -111,8 +111,8 @@ async function getPasskey(id: string) {
 	return row;
 }
 
-async function startSignIn() {
-	const res = await post("/authentication/options");
+async function startSignIn(email: string) {
+	const res = await post("/authentication/options", { body: { email } });
 	expect(res.status).toBe(200);
 	const options = await res.json();
 	const challengeId = getCookie(res, WEBAUTHN_CHALLENGE_COOKIE_NAME);
@@ -149,14 +149,38 @@ afterEach(() => {
 });
 
 describe("POST /authentication/options", () => {
-	it("issues a usernameless challenge bound to an HttpOnly cookie", async () => {
-		const res = await post("/authentication/options");
+	async function optionsFor(email: string) {
+		const res = await post("/authentication/options", { body: { email } });
+		expect(res.status).toBe(200);
+		return res.json();
+	}
+
+	it("lists the account's passkeys in a challenge bound to an HttpOnly cookie", async () => {
+		const alice = await createUser("alice@example.com");
+		const phone = createAuthenticator(rp);
+		const laptop = createAuthenticator(rp);
+		await savePasskey(alice, phone, { transports: ["hybrid", "internal"] });
+		await savePasskey(alice, laptop, { transports: null });
+
+		const res = await post("/authentication/options", {
+			body: { email: "alice@example.com" },
+		});
 		expect(res.status).toBe(200);
 
 		const options = await res.json();
 		expect(options.challenge).toEqual(expect.any(String));
 		expect(options.rpId).toBe("localhost");
-		expect(options.allowCredentials).toBeUndefined();
+		expect(options.allowCredentials).toEqual(
+			expect.arrayContaining([
+				{
+					id: phone.credentialId,
+					type: "public-key",
+					transports: ["hybrid", "internal"],
+				},
+				{ id: laptop.credentialId, type: "public-key" },
+			]),
+		);
+		expect(options.allowCredentials).toHaveLength(2);
 
 		const setCookie = res.headers
 			.getSetCookie()
@@ -165,14 +189,69 @@ describe("POST /authentication/options", () => {
 		expect(setCookie).toMatch(/Max-Age=300/);
 	});
 
+	it("matches the email case-insensitively", async () => {
+		const alice = await createUser("alice@example.com");
+		const authenticator = createAuthenticator(rp);
+		await savePasskey(alice, authenticator);
+
+		const options = await optionsFor("Alice@Example.com");
+		expect(options.allowCredentials).toEqual([
+			{
+				id: authenticator.credentialId,
+				type: "public-key",
+				transports: ["internal"],
+			},
+		]);
+	});
+
+	it("answers an unknown email with a stable decoy shaped like a real passkey", async () => {
+		const first = await optionsFor("nobody@example.com");
+		const again = await optionsFor("Nobody@Example.com");
+		const other = await optionsFor("someone-else@example.com");
+
+		expect(first.allowCredentials).toEqual([
+			{
+				id: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+				type: "public-key",
+				transports: ["internal"],
+			},
+		]);
+		expect(again.allowCredentials).toEqual(first.allowCredentials);
+		expect(other.allowCredentials[0].id).not.toBe(
+			first.allowCredentials[0].id,
+		);
+	});
+
+	it("answers an account without passkeys the same way as an unknown email", async () => {
+		await createUser("alice@example.com");
+
+		const options = await optionsFor("alice@example.com");
+		expect(options.allowCredentials).toEqual([
+			{
+				id: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+				type: "public-key",
+				transports: ["internal"],
+			},
+		]);
+	});
+
+	it("requires an email", async () => {
+		for (const body of [undefined, {}, { email: "" }, { email: 42 }]) {
+			const res = await post("/authentication/options", { body });
+			expect(res.status).toBe(400);
+			expect(await res.json()).toEqual({ error: "Email is required" });
+		}
+	});
+
 	it("is rate-limited per client", async () => {
 		const ip = "192.0.2.1";
+		const body = { email: "alice@example.com" };
 		for (let i = 0; i < PASSKEY_OPTIONS_RATE_LIMIT_MAX; i++) {
-			expect((await post("/authentication/options", { ip })).status).toBe(
-				200,
-			);
+			expect(
+				(await post("/authentication/options", { ip, body })).status,
+			).toBe(200);
 		}
-		const limited = await post("/authentication/options", { ip });
+		const limited = await post("/authentication/options", { ip, body });
 		expect(limited.status).toBe(429);
 		expect(limited.headers.get("Retry-After")).toEqual(expect.any(String));
 	});
@@ -197,7 +276,7 @@ describe("POST /authentication/verify", () => {
 	}
 
 	it("signs the user in and records the passkey's use", async () => {
-		const { challenge, cookies } = await startSignIn();
+		const { challenge, cookies } = await startSignIn("alice@example.com");
 		const res = await post("/authentication/verify", {
 			cookies,
 			body: authenticator.authenticate(challenge, userHandleOf(alice)),
@@ -226,7 +305,7 @@ describe("POST /authentication/verify", () => {
 	});
 
 	it("rejects a response signed over a different challenge", async () => {
-		const { cookies } = await startSignIn();
+		const { cookies } = await startSignIn("alice@example.com");
 		const res = await post("/authentication/verify", {
 			cookies,
 			body: authenticator.authenticate(
@@ -243,7 +322,7 @@ describe("POST /authentication/verify", () => {
 
 	it("rejects an expired challenge", async () => {
 		vi.useFakeTimers({ toFake: ["Date"] });
-		const { challenge, cookies } = await startSignIn();
+		const { challenge, cookies } = await startSignIn("alice@example.com");
 		vi.setSystemTime(Date.now() + WEBAUTHN_CHALLENGE_TTL_MS + 1000);
 
 		const res = await post("/authentication/verify", {
@@ -256,7 +335,7 @@ describe("POST /authentication/verify", () => {
 	});
 
 	it("rejects a replayed challenge", async () => {
-		const { challenge, cookies } = await startSignIn();
+		const { challenge, cookies } = await startSignIn("alice@example.com");
 
 		const first = await post("/authentication/verify", {
 			cookies,
@@ -280,7 +359,7 @@ describe("POST /authentication/verify", () => {
 
 	it("rejects a userHandle that doesn't belong to the credential's owner", async () => {
 		const bob = await createUser("bob@example.com");
-		const { challenge, cookies } = await startSignIn();
+		const { challenge, cookies } = await startSignIn("alice@example.com");
 
 		const res = await post("/authentication/verify", {
 			cookies,
@@ -293,7 +372,7 @@ describe("POST /authentication/verify", () => {
 
 	it("rejects an unknown credential with the same generic error", async () => {
 		const stranger = createAuthenticator(rp);
-		const { challenge, cookies } = await startSignIn();
+		const { challenge, cookies } = await startSignIn("alice@example.com");
 
 		await expectRejected(
 			await post("/authentication/verify", {
@@ -304,7 +383,7 @@ describe("POST /authentication/verify", () => {
 	});
 
 	it("rejects a request without a challenge cookie", async () => {
-		const { challenge } = await startSignIn();
+		const { challenge } = await startSignIn("alice@example.com");
 
 		await expectRejected(
 			await post("/authentication/verify", {
@@ -326,6 +405,49 @@ describe("POST /authentication/verify", () => {
 				cookies,
 				body: authenticator.authenticate(
 					options.challenge,
+					userHandleOf(alice),
+				),
+			}),
+		);
+	});
+	it("accepts a response without a userHandle", async () => {
+		const { challenge, cookies } = await startSignIn("alice@example.com");
+		const res = await post("/authentication/verify", {
+			cookies,
+			body: authenticator.authenticate(challenge, undefined),
+		});
+
+		expect(res.status).toBe(200);
+		await expect(res.json()).resolves.toMatchObject({
+			user: { id: alice.id },
+		});
+	});
+
+	it("rejects a passkey of an account other than the one signing in", async () => {
+		const bob = await createUser("bob@example.com");
+		await savePasskey(bob, createAuthenticator(rp));
+		const { challenge, cookies } = await startSignIn("bob@example.com");
+
+		await expectRejected(
+			await post("/authentication/verify", {
+				cookies,
+				body: authenticator.authenticate(
+					challenge,
+					userHandleOf(alice),
+				),
+			}),
+		);
+		expect((await getPasskey(authenticator.credentialId)).counter).toBe(0);
+	});
+
+	it("rejects every passkey after a decoy challenge", async () => {
+		const { challenge, cookies } = await startSignIn("nobody@example.com");
+
+		await expectRejected(
+			await post("/authentication/verify", {
+				cookies,
+				body: authenticator.authenticate(
+					challenge,
 					userHandleOf(alice),
 				),
 			}),

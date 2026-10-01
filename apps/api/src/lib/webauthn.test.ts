@@ -13,7 +13,22 @@ describe("loadWebAuthnConfig", () => {
 			rpID: "localhost",
 			rpName: "PDF Viewer",
 			origin: "http://localhost:5173",
+			decoySecret: expect.stringMatching(/^[0-9a-f]{64}$/),
 		});
+	});
+
+	it("uses PASSKEY_DECOY_SECRET when set", () => {
+		const config = loadWebAuthnConfig({
+			...dev,
+			PASSKEY_DECOY_SECRET: "s3cret",
+		});
+		expect(config.decoySecret).toBe("s3cret");
+	});
+
+	it("requires PASSKEY_DECOY_SECRET in production", () => {
+		expect(() =>
+			loadWebAuthnConfig({ ...dev, NODE_ENV: "production" }),
+		).toThrow("PASSKEY_DECOY_SECRET");
 	});
 
 	it("accepts an https origin on a subdomain of the RP ID", () => {

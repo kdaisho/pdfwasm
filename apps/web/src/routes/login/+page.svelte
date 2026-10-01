@@ -47,9 +47,11 @@
 		{:else}
 			<h1 class="text-2xl font-bold text-center">Log In</h1>
 
-			<EmailCodeSignIn onSuccess={afterEmailCodeSignIn} />
-
-			<PasskeySignIn autofill onSuccess={goHome} />
+			<EmailCodeSignIn onSuccess={afterEmailCodeSignIn}>
+				{#snippet passkey(email, primary)}
+					<PasskeySignIn {email} {primary} onSuccess={goHome} />
+				{/snippet}
+			</EmailCodeSignIn>
 
 			<p class="text-sm text-center">
 				Don't have an account?

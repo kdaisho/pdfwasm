@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { Hono, type Context } from "hono";
 import { and, asc, eq, lt, or } from "drizzle-orm";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
@@ -297,18 +298,67 @@ passkey.delete("/credentials/:id", authMiddleware, async (c) => {
 	return c.json({ ok: true });
 });
 
-// ── Authentication (discoverable / usernameless sign-in) ───────────────────
+// ── Authentication (email first, then the account's passkeys) ─────────────
+
+// Naming the account's passkeys in allowCredentials keeps the request away
+// from password managers that hold none of them (a locked 1Password otherwise
+// intercepts usernameless requests and fails them on dismiss), so the
+// browser's own passkey picker handles it.
+
+// Stands in for the passkeys of an email that has none, or no account, so
+// the options response doesn't reveal which emails have accounts. Stable per
+// email, and as long as a platform passkey's 32-byte ID.
+function decoyCredential(email: string) {
+	const id = isoBase64URL.fromBuffer(
+		new Uint8Array(
+			createHmac("sha256", webauthnConfig.decoySecret)
+				.update(email)
+				.digest(),
+		),
+	);
+	return { id, transports: ["internal"] as AuthenticatorTransportFuture[] };
+}
 
 passkey.post("/authentication/options", optionsRateLimit, async (c) => {
-	// No allowCredentials: the authenticator offers whichever passkeys it holds
-	// for this RP, and the user is identified from the assertion.
+	const body = await readJson<{ email?: unknown }>(c);
+	const email =
+		typeof body?.email === "string" ? body.email.toLowerCase() : "";
+	if (!email) {
+		return c.json({ error: "Email is required" }, 400);
+	}
+
+	const owned = await db
+		.select({
+			id: passkeys.id,
+			userId: passkeys.userId,
+			transports: passkeys.transports,
+		})
+		.from(passkeys)
+		.innerJoin(users, eq(passkeys.userId, users.id))
+		.where(eq(users.email, email));
+
 	const options = await generateAuthenticationOptions({
 		rpID: webauthnConfig.rpID,
+		allowCredentials:
+			owned.length > 0
+				? owned.map((p) => ({
+						id: p.id,
+						transports: (p.transports ?? undefined) as
+							| AuthenticatorTransportFuture[]
+							| undefined,
+					}))
+				: [decoyCredential(email)],
 		userVerification: "preferred",
 		timeout: WEBAUTHN_CHALLENGE_TTL_MS,
 	});
 
-	await issueChallenge(c, "authentication", options.challenge, null);
+	// A decoy's challenge belongs to no one, so verify rejects any response
+	await issueChallenge(
+		c,
+		"authentication",
+		options.challenge,
+		owned[0]?.userId ?? null,
+	);
 
 	return c.json(options);
 });
@@ -317,23 +367,30 @@ passkey.post("/authentication/verify", async (c) => {
 	const challenge = await consumeChallenge(c, "authentication");
 	const body = await readJson<AuthenticationResponseJSON>(c);
 
-	if (!challenge || typeof body?.id !== "string") {
+	if (!challenge?.userId || typeof body?.id !== "string") {
 		return c.json({ error: SIGN_IN_FAILED }, 400);
 	}
 
+	// Only a passkey of the account the challenge was issued for
 	const [row] = await db
 		.select({ passkey: passkeys, webauthnUserId: users.webauthnUserId })
 		.from(passkeys)
 		.innerJoin(users, eq(passkeys.userId, users.id))
-		.where(eq(passkeys.id, body.id))
+		.where(
+			and(
+				eq(passkeys.id, body.id),
+				eq(passkeys.userId, challenge.userId),
+			),
+		)
 		.limit(1);
 
-	// The authenticator names the account via userHandle; it must be the
-	// credential owner's handle.
+	// Authenticators may omit userHandle when allowCredentials named the
+	// passkey; when present, it must still be the owner's handle.
+	const userHandle = body.response?.userHandle;
 	if (
 		!row ||
-		body.response?.userHandle !==
-			isoBase64URL.fromUTF8String(row.webauthnUserId)
+		(userHandle &&
+			userHandle !== isoBase64URL.fromUTF8String(row.webauthnUserId))
 	) {
 		return c.json({ error: SIGN_IN_FAILED }, 400);
 	}
