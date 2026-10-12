@@ -1,0 +1,1 @@
+ALTER TABLE "pdf_documents" ADD COLUMN "document_type" varchar(10) DEFAULT 'pdf' NOT NULL;

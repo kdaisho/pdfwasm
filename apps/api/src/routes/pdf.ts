@@ -4,6 +4,11 @@ import { mkdir, unlink, writeFile, stat, readFile } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileTypeFromBuffer } from "file-type";
+import {
+	DOCUMENT_MIME_TYPES,
+	DOCUMENT_TYPES,
+	type DocumentType,
+} from "@pdfwasm/shared/constants";
 import { db } from "../db/index.js";
 import { pdfDocuments, userPreferences } from "../db/schema.js";
 import { authMiddleware } from "../middleware/auth.js";
@@ -22,11 +27,24 @@ const pdf = new Hono<AuthEnv>();
 
 pdf.use("/*", authMiddleware);
 
-function sanitizeFilename(raw: string): string {
+function sanitizeFilename(raw: string, type: DocumentType): string {
 	const base = basename(raw);
 	// Strip control characters and problematic characters for Content-Disposition
 	const cleaned = base.replace(/[^\w.\-() ]/g, "_");
-	return cleaned || "document.pdf";
+	return cleaned || `document.${type}`;
+}
+
+// What the bytes are, going by content: the PDF header, or an EPUB's
+// `mimetype` zip entry. Anything else (including other zips) is rejected.
+async function detectDocumentType(
+	buffer: Buffer,
+): Promise<DocumentType | null> {
+	const detected = await fileTypeFromBuffer(buffer);
+	return (
+		DOCUMENT_TYPES.find(
+			(type) => DOCUMENT_MIME_TYPES[type] === detected?.mime,
+		) ?? null
+	);
 }
 
 pdf.post("/upload", async (c) => {
@@ -35,7 +53,7 @@ pdf.post("/upload", async (c) => {
 	const file = body["file"];
 
 	if (!file || !(file instanceof File)) {
-		return c.json({ error: "No PDF file provided" }, 400);
+		return c.json({ error: "No file provided" }, 400);
 	}
 
 	const arrayBuffer = await file.arrayBuffer();
@@ -50,18 +68,18 @@ pdf.post("/upload", async (c) => {
 		);
 	}
 
-	const type = await fileTypeFromBuffer(buffer);
-	if (!type || type.mime !== "application/pdf") {
-		return c.json({ error: "File is not a valid PDF" }, 400);
+	const documentType = await detectDocumentType(buffer);
+	if (!documentType) {
+		return c.json({ error: "File is not a valid PDF or EPUB" }, 400);
 	}
 
 	await mkdir(PDF_STORAGE_PATH, { recursive: true });
 
-	const storageKey = `${randomUUID()}.pdf`;
+	const storageKey = `${randomUUID()}.${documentType}`;
 
 	await writeFile(join(PDF_STORAGE_PATH, storageKey), buffer);
 
-	const safeFilename = sanitizeFilename(file.name);
+	const safeFilename = sanitizeFilename(file.name, documentType);
 
 	const [doc] = await db
 		.insert(pdfDocuments)
@@ -70,6 +88,7 @@ pdf.post("/upload", async (c) => {
 			filename: safeFilename,
 			storageKey,
 			fileSize: buffer.length,
+			documentType,
 		})
 		.returning();
 
@@ -78,6 +97,8 @@ pdf.post("/upload", async (c) => {
 			id: doc.id,
 			filename: doc.filename,
 			fileSize: doc.fileSize,
+			pageCount: doc.pageCount,
+			documentType: doc.documentType,
 			uploadedAt: doc.uploadedAt,
 		},
 		201,
@@ -93,6 +114,7 @@ pdf.get("/list", async (c) => {
 			filename: pdfDocuments.filename,
 			fileSize: pdfDocuments.fileSize,
 			pageCount: pdfDocuments.pageCount,
+			documentType: pdfDocuments.documentType,
 			uploadedAt: pdfDocuments.uploadedAt,
 		})
 		.from(pdfDocuments)
@@ -125,7 +147,7 @@ pdf.get("/download/:id", async (c) => {
 	const fileBuffer = await readFile(fullPath);
 
 	return c.body(fileBuffer, 200, {
-		"Content-Type": "application/pdf",
+		"Content-Type": DOCUMENT_MIME_TYPES[doc.documentType],
 		"Content-Disposition": `attachment; filename="${doc.filename}"`,
 		"Content-Length": fileStats.size.toString(),
 	});

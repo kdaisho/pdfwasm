@@ -41,7 +41,9 @@
 		{pdf.filename}
 	</div>
 	<div class="mt-[3px] font-mono text-[10.5px] text-surface-400">
-		{formatFileSize(pdf.fileSize)} · {formatDate(pdf.uploadedAt)}
+		{pdf.documentType === "epub" ? "EPUB · " : ""}{formatFileSize(
+			pdf.fileSize,
+		)} · {formatDate(pdf.uploadedAt)}
 	</div>
 
 	<DeleteWithConfirmation

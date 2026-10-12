@@ -2,12 +2,13 @@
 	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
-	import { takePdf } from "$lib/utils/takePdf";
+	import { DOCUMENT_ACCEPT } from "$lib/utils/documentFile";
+	import { takeDocument } from "$lib/utils/takeDocument";
 
 	// Opening a local file is a viewer action; stash the file and hand off to /.
 	function handleFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = takePdf(input.files);
+		const file = takeDocument(input.files);
 		if (file) {
 			pendingPdfStore.request({ type: "file", file });
 			goto(resolve("/"));
@@ -34,10 +35,10 @@
 				stroke-linejoin="round"
 			/>
 		</svg>
-		Open PDF
+		Open file
 		<input
 			type="file"
-			accept=".pdf"
+			accept={DOCUMENT_ACCEPT}
 			onchange={handleFileChange}
 			class="hidden"
 		/>
@@ -91,6 +92,6 @@
 				stroke-width="1.3"
 			/>
 		</svg>
-		My PDFs
+		My library
 	</span>
 </div>

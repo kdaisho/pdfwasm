@@ -7,6 +7,7 @@
 		ZOOM_STEP,
 	} from "$lib/constants/zoom";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
+	import { DOCUMENT_ACCEPT } from "$lib/utils/documentFile";
 
 	interface Props {
 		onFileChange: (e: Event) => void;
@@ -45,7 +46,7 @@
 
 <div class="flex flex-col gap-2 p-[10px]">
 	<!--
-		Open PDF is the primary CTA only when no document is open; once a PDF is
+		Open file is the primary CTA only when no document is open; once one is
 		loaded (View or Edit mode) it demotes to a secondary/ghost button so the
 		primary action reflects context.
 	-->
@@ -69,10 +70,10 @@
 				stroke-linejoin="round"
 			/>
 		</svg>
-		Open PDF
+		Open file
 		<input
 			type="file"
-			accept=".pdf"
+			accept={DOCUMENT_ACCEPT}
 			onchange={onFileChange}
 			class="hidden"
 		/>
@@ -174,7 +175,7 @@
 					stroke-width="1.3"
 				/>
 			</svg>
-			My PDFs
+			My library
 		</a>
 	{/if}
 </div>

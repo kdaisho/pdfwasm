@@ -24,10 +24,16 @@
 
 		// Populate the dock now so it's mounted as the flight's landing target;
 		// the viewer re-affirms it from the pending request after navigation.
-		currentPdfStore.set({ id: pdf.id, filename: pdf.filename, subtitle });
+		currentPdfStore.set({
+			id: pdf.id,
+			type: pdf.documentType,
+			filename: pdf.filename,
+			subtitle,
+		});
 		pendingPdfStore.request({
 			type: "saved",
 			id: pdf.id,
+			documentType: pdf.documentType,
 			filename: pdf.filename,
 			subtitle,
 		});
@@ -72,7 +78,7 @@
 <div class="px-[34px] pb-16 pt-[30px]">
 	<div class="mb-6">
 		<h1 class="text-[21px] font-bold tracking-tight text-surface-900">
-			My PDFs
+			My library
 		</h1>
 		<p class="mt-1 text-[13.5px] text-surface-500">
 			Pick up where you left off — choose a document by its cover.
@@ -86,10 +92,10 @@
 			class="flex max-w-[1100px] flex-col items-center justify-center rounded-xl border border-dashed border-surface-300 py-16 text-center"
 		>
 			<p class="text-sm font-medium text-surface-600">
-				No saved PDFs yet
+				No saved documents yet
 			</p>
 			<p class="mt-1 text-[13px] text-surface-400">
-				Open a PDF and it'll show up here for next time.
+				Open a PDF or EPUB and it'll show up here for next time.
 			</p>
 		</div>
 	{:else}
