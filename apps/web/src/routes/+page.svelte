@@ -1,18 +1,25 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
 	import type { PDFiumLibrary, PDFiumDocument } from "@hyzyla/pdfium";
+	import EpubPlaceholder from "$lib/components/EpubPlaceholder.svelte";
 	import PdfDropZone from "$lib/components/PdfDropZone.svelte";
 	import PdfSidebarItems from "$lib/components/PdfSidebarItems.svelte";
 	import PdfViewer from "$lib/components/PdfViewer.svelte";
 	import { ZOOM_BASE_WIDTH } from "$lib/constants/zoom";
 	import { extractCharBoxes, RENDER_SCALE } from "$lib/services/charBoxes";
+	import type { ParsedEpub } from "$lib/services/epub";
+	import {
+		readDocument,
+		type OpenedDocument,
+	} from "$lib/services/openDocument";
 	import { downloadPdf, setLastPdf, uploadPdf } from "$lib/services/pdf-api";
 	import { getAuth } from "$lib/stores/auth.svelte.js";
 	import { currentPdfStore } from "$lib/stores/currentPdf.svelte.js";
 	import { pendingPdfStore } from "$lib/stores/pendingPdf.svelte.js";
 	import { sidebarStore } from "$lib/stores/sidebar.svelte.js";
+	import { toaster } from "$lib/stores/toaster";
 	import { formatFileSize } from "$lib/utils/format";
-	import { takePdf } from "$lib/utils/takePdf";
+	import { takeDocument } from "$lib/utils/takeDocument";
 	import type { PageData as PdfPageData } from "$lib/types";
 
 	let { data } = $props();
@@ -29,6 +36,10 @@
 	let currentDoc: PDFiumDocument | null = $state(null);
 	let charExtractionId = 0;
 	let pdfBytes: Uint8Array | null = $state(null);
+	// The open EPUB, if the current document is one (PDF state is cleared then).
+	// Raw: the parsed book is large plain data and the archive wraps a JSZip
+	// instance, neither of which should become a deep reactive proxy.
+	let epub: ParsedEpub | null = $state.raw(null);
 	let pdfFilename: string | null = $state(null);
 	let splitMode = $state(false);
 	let uploadStatus: "idle" | "uploading" | "saved" | "error" = $state("idle");
@@ -50,6 +61,7 @@
 			if (pending?.type === "saved") {
 				currentPdfStore.set({
 					id: pending.id,
+					type: pending.documentType,
 					filename: pending.filename,
 					subtitle: pending.subtitle,
 				});
@@ -57,14 +69,21 @@
 			} else if (pending?.type === "file") {
 				await loadFile(pending.file);
 			} else if (lastPdfBytes) {
-				uploadStatus = "saved";
-				pdfFilename = data.lastPdfFilename;
-				currentPdfStore.set({
-					id: data.lastPdfId,
-					filename: data.lastPdfFilename ?? "Document",
-					subtitle: null,
-				});
-				await loadPdfBytes(lastPdfBytes);
+				const filename = data.lastPdfFilename ?? "Document";
+				const result = await readDocument(lastPdfBytes, filename);
+				if (result.ok) {
+					uploadStatus = "saved";
+					pdfFilename = data.lastPdfFilename;
+					currentPdfStore.set({
+						id: data.lastPdfId,
+						type: result.document.type,
+						filename,
+						subtitle: null,
+					});
+					await showDocument(result.document);
+				} else {
+					docError = new Error(result.error.description);
+				}
 			}
 		} catch (err: unknown) {
 			libError = err instanceof Error ? err : new Error(String(err));
@@ -74,6 +93,28 @@
 	}
 
 	init();
+
+	// Swap the viewer to `doc`, closing whatever was open before.
+	async function showDocument(doc: OpenedDocument) {
+		if (doc.type === "epub") {
+			closePdf();
+			epub = doc.epub;
+			return;
+		}
+		epub = null;
+		await loadPdfBytes(doc.bytes);
+	}
+
+	function closePdf() {
+		charExtractionId++; // cancel any in-flight char extraction
+		currentDoc?.destroy();
+		currentDoc = null;
+		pages = [];
+		pdfBytes = null;
+		splitMode = false;
+		docError = null;
+		docLoading = false;
+	}
 
 	async function loadPdfBytes(uint8: Uint8Array) {
 		if (!library) return;
@@ -144,29 +185,41 @@
 	async function loadFile(file: File) {
 		if (!library) return;
 
+		const buffer = await file.arrayBuffer();
+		const result = await readDocument(
+			new Uint8Array(buffer),
+			file.name,
+			file.type,
+		);
+		// An unreadable EPUB leaves the current document open and isn't saved.
+		if (!result.ok) {
+			toaster.error(result.error);
+			return;
+		}
+
 		uploadStatus = "idle";
 		uploadError = null;
 
-		const buffer = await file.arrayBuffer();
-		const uint8 = new Uint8Array(buffer);
-
+		const type = result.document.type;
 		pdfFilename = file.name;
 		currentPdfStore.set({
 			id: null,
+			type,
 			filename: file.name,
 			subtitle: formatFileSize(file.size),
 		});
-		await loadPdfBytes(uint8);
+		await showDocument(result.document);
 
 		if (auth.isAuthenticated) {
 			uploadStatus = "uploading";
 			uploadPdf(file)
 				.then((meta) => {
 					uploadStatus = "saved";
-					// Now that it's saved, the dock can show its first-page thumbnail.
+					// Now that it's saved, the dock can show its cover.
 					if (currentPdfStore.value?.filename === file.name) {
 						currentPdfStore.set({
 							id: meta.id,
+							type,
 							filename: file.name,
 							subtitle: formatFileSize(file.size),
 						});
@@ -189,8 +242,10 @@
 
 		try {
 			const uint8 = await downloadPdf(id);
+			const result = await readDocument(uint8, filename ?? "Document");
+			if (!result.ok) throw new Error(result.error.description);
 			pdfFilename = filename ?? null;
-			await loadPdfBytes(uint8);
+			await showDocument(result.document);
 			uploadStatus = "saved";
 			setLastPdf(id).catch(() => {});
 		} catch (err: unknown) {
@@ -204,7 +259,7 @@
 
 	function handleFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = takePdf(input.files);
+		const file = takeDocument(input.files);
 		if (file) void loadFile(file);
 	}
 
@@ -227,7 +282,7 @@
 				thumbnailWidth = value;
 			},
 			showZoom: pages.length > 0,
-			hasDocument: pages.length > 0,
+			hasDocument: pages.length > 0 || epub !== null,
 		});
 	});
 
@@ -243,15 +298,9 @@
 	});
 
 	function resetViewer() {
-		charExtractionId++; // cancel any in-flight char extraction
-		currentDoc?.destroy();
-		currentDoc = null;
-		pages = [];
-		pdfBytes = null;
+		closePdf();
+		epub = null;
 		pdfFilename = null;
-		splitMode = false;
-		docError = null;
-		docLoading = false;
 		uploadStatus = "idle";
 		uploadError = null;
 		currentPdfStore.clear();
@@ -274,6 +323,8 @@
 	<div class="flex items-center justify-center h-full text-lg text-error-500">
 		Failed to load PDFium: {libError.message}
 	</div>
+{:else if epub}
+	<EpubPlaceholder {epub} filename={pdfFilename ?? "Document"} />
 {:else if pages.length > 0 && currentDoc && pdfBytes}
 	<PdfViewer
 		{pages}
@@ -290,6 +341,6 @@
 	<div
 		class="flex items-center justify-center h-full text-lg text-surface-500"
 	>
-		Open a PDF file to get started.
+		Open a PDF or EPUB file to get started.
 	</div>
 {/if}

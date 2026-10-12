@@ -1,24 +1,38 @@
-import { MAX_FILE_SIZE } from "@pdfwasm/shared/constants";
+import { DOCUMENT_MIME_TYPES, MAX_FILE_SIZE } from "@pdfwasm/shared/constants";
 
-export type PdfPick =
+export type DocumentPick =
 	| { ok: true; file: File; ignored: number }
 	| { ok: false; error: string };
 
-// Some OSes report no MIME type for dropped files, so fall back to the extension.
-function isPdf(file: File): boolean {
-	return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+/** For the file picker's `accept` attribute. */
+export const DOCUMENT_ACCEPT = [
+	".pdf",
+	".epub",
+	...Object.values(DOCUMENT_MIME_TYPES),
+].join(",");
+
+const SUPPORTED_MIME_TYPES = new Set(Object.values(DOCUMENT_MIME_TYPES));
+
+// A first pass on name and MIME type, only to choose which file to open; its
+// content decides what it really is (see `readDocument`). Some OSes report no
+// MIME type for dropped files, so the extension counts too.
+function looksSupported(file: File): boolean {
+	return (
+		SUPPORTED_MIME_TYPES.has(file.type) || /\.(pdf|epub)$/i.test(file.name)
+	);
 }
 
-// Chooses the one PDF to open from a file picker or a drop. Enforces the same
-// size cap as the upload API so a file that opens is also a file that can save.
-export function pickPdf(files: ArrayLike<File>): PdfPick {
+// Chooses the one PDF or EPUB to open from a file picker or a drop. Enforces
+// the same size cap as the upload API so a file that opens is also a file that
+// can save.
+export function pickDocument(files: ArrayLike<File>): DocumentPick {
 	const all = Array.from(files);
-	const file = all.find(isPdf);
+	const file = all.find(looksSupported);
 	if (!file) {
 		return {
 			ok: false,
 			error: all[0]
-				? `"${all[0].name}" isn't a PDF. Only PDF files can be opened.`
+				? `"${all[0].name}" isn't a PDF or EPUB. Only PDF and EPUB files can be opened.`
 				: "No file was dropped.",
 		};
 	}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { MAX_FILE_SIZE } from "@pdfwasm/shared/constants";
-	import { createDragDepth, hasExternalFiles } from "$lib/utils/pdfFile";
-	import { takePdf } from "$lib/utils/takePdf";
+	import { createDragDepth, hasExternalFiles } from "$lib/utils/documentFile";
+	import { takeDocument } from "$lib/utils/takeDocument";
 
 	interface Props {
 		onFile: (file: File) => void;
@@ -38,7 +38,7 @@
 		e.preventDefault();
 		depth.reset();
 		active = false;
-		const file = takePdf(e.dataTransfer?.files);
+		const file = takeDocument(e.dataTransfer?.files);
 		if (file) onFile(file);
 	}
 </script>
@@ -75,10 +75,10 @@
 				/>
 			</svg>
 			<p class="text-base font-semibold text-surface-950-50">
-				Drop a PDF to open it
+				Drop a PDF or EPUB to open it
 			</p>
 			<p class="text-[13px] text-surface-600-400">
-				One PDF at a time, up to {MAX_FILE_SIZE / (1024 * 1024)} MB
+				One file at a time, up to {MAX_FILE_SIZE / (1024 * 1024)} MB
 			</p>
 		</div>
 	</div>

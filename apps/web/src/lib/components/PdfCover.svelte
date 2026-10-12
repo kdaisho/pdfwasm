@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { getThumbnailById } from "$lib/services/thumbnails";
+	import {
+		getThumbnailById,
+		type DocumentCover,
+	} from "$lib/services/thumbnails";
+	import TitleCover from "./TitleCover.svelte";
 
 	interface Props {
 		id: string;
@@ -10,18 +14,22 @@
 
 	let { id, filename, class: klass = "" }: Props = $props();
 
-	let src = $state<string | null>(null);
+	let cover = $state<DocumentCover | null>(null);
 	let failed = $state(false);
+	// An EPUB cover in a format the browser can't decode falls back to its title.
+	let imageFailed = $state(false);
 
-	// Render the first page as the cover. Re-runs if the id changes (dock reuse).
+	// A PDF's first page or an EPUB's cover image. Re-runs if the id changes
+	// (dock reuse).
 	$effect(() => {
 		const currentId = id;
-		src = null;
+		cover = null;
 		failed = false;
+		imageFailed = false;
 		let cancelled = false;
 		getThumbnailById(currentId)
-			.then((url) => {
-				if (!cancelled) src = url;
+			.then((next) => {
+				if (!cancelled) cover = next;
 			})
 			.catch(() => {
 				if (!cancelled) failed = true;
@@ -33,11 +41,20 @@
 </script>
 
 <div class="relative overflow-hidden bg-white {klass}">
-	{#if src}
+	{#if cover?.url && !imageFailed}
 		<img
-			{src}
-			alt="First page of {filename}"
+			src={cover.url}
+			alt={cover.title
+				? `Cover of ${cover.title}`
+				: `First page of ${filename}`}
+			onerror={() => (imageFailed = true)}
 			class="h-full w-full object-cover object-top"
+		/>
+	{:else if cover}
+		<TitleCover
+			title={cover.title ?? filename.replace(/\.[^.]+$/, "")}
+			author={cover.author}
+			class="h-full w-full"
 		/>
 	{:else if failed}
 		<div

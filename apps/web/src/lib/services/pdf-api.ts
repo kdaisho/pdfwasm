@@ -1,10 +1,14 @@
+import type { DocumentType } from "@pdfwasm/shared/constants";
+
 const API_BASE = import.meta.env.VITE_API_URL;
 
 export interface PdfDocumentMeta {
 	id: string;
 	filename: string;
 	fileSize: number;
-	pageCount: number;
+	pageCount: number | null;
+	/** Detected by the server from the file's content. */
+	documentType: DocumentType;
 	uploadedAt: string;
 }
 

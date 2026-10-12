@@ -10,6 +10,7 @@ import {
 	customType,
 	index,
 } from "drizzle-orm/pg-core";
+import type { DocumentType } from "@pdfwasm/shared/constants";
 
 // postgres-js hands bytea back as a Buffer; normalise to a plain Uint8Array,
 // which is what @simplewebauthn/server expects for credential public keys.
@@ -59,6 +60,12 @@ export const pdfDocuments = pgTable("pdf_documents", {
 	storageKey: varchar("storage_key", { length: 255 }).notNull(),
 	fileSize: integer("file_size").notNull(),
 	pageCount: integer("page_count"),
+	// 'pdf' | 'epub', detected from the uploaded bytes. The table keeps its
+	// original name; rows from before EPUB support default to 'pdf'.
+	documentType: varchar("document_type", { length: 10 })
+		.$type<DocumentType>()
+		.default("pdf")
+		.notNull(),
 	uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 });
 
