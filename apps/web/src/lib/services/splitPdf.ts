@@ -1,5 +1,8 @@
 import { PDFDocument, type PDFPage } from "pdf-lib";
-import JSZip from "jszip";
+import { downloadSplitZip, sanitizeBasename } from "./splitDownload";
+
+// Re-exported so existing callers keep importing it from here.
+export { sanitizeBasename };
 
 /** One entry in the combined sequence: a single page, identified by its source and that source's page index. */
 export interface SequenceEntry {
@@ -129,37 +132,16 @@ export async function splitPdf(args: {
 	return results;
 }
 
-/**
- * Strip the trailing `.pdf` extension (case-insensitive), replace path
- * separators with `-`, collapse whitespace runs to a single `-`, and cap at
- * 80 chars. Non-ASCII characters are preserved. Falls back to "document" when
- * the input is empty after sanitization or not provided.
- */
-export function sanitizeBasename(input: string | null | undefined): string {
-	if (!input) return "document";
-	let name = input.replace(/\.pdf$/i, "");
-	name = name.replace(/[/\\]/g, "-");
-	name = name.replace(/\s+/g, "-");
-	if (name.length > 80) name = name.slice(0, 80);
-	return name || "document";
-}
-
 export async function downloadSplitPdfs(
 	segments: Uint8Array[],
 	sourceFilename: string | null | undefined,
 ) {
 	const basename = sanitizeBasename(sourceFilename);
-	const zip = new JSZip();
-	for (let i = 0; i < segments.length; i++) {
-		zip.file(`${basename}-part-${i + 1}.pdf`, segments[i]);
-	}
-	const blob = await zip.generateAsync({ type: "blob" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = `${basename}-split.zip`;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	setTimeout(() => URL.revokeObjectURL(url), 10_000);
+	await downloadSplitZip(
+		segments.map((data, i) => ({
+			name: `${basename}-part-${i + 1}.pdf`,
+			data,
+		})),
+		basename,
+	);
 }
