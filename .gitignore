@@ -28,6 +28,7 @@ Thumbs.db
 
 # Claude Code runtime
 .claude/*.lock
+.claude/worktrees/
 
 # Misc
 .netlify
